@@ -154,6 +154,7 @@ body.menu-open .hamburger span:nth-child(3){transform:translateY(-7px) rotate(-4
 }
 .scroll-cue:hover .chev{background:var(--navy);color:#fff}
 @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(7px)}}
+@keyframes riseIn{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
 
 /* ---- MAKALE PANELLERİ ---- */
 .art-kicker{
@@ -238,6 +239,8 @@ body.menu-open .hamburger span:nth-child(3){transform:translateY(-7px) rotate(-4
 }
 .dots button:hover{background:rgba(22,35,122,.3)}
 .dots button.on{background:var(--orange-hero);border-color:var(--orange-hero);transform:scale(1.25)}
+/* yan yazı (overlay) açıkken sağdaki yuvarlaklar gizlenir */
+body.overlay-open .dots{opacity:0;visibility:hidden;pointer-events:none}
 
 /* ============================================================
    OVERLAY (yan yazılar / Hakkımızda / Kaynakça sayfaları)
@@ -311,6 +314,11 @@ body.menu-open .hamburger span:nth-child(3){transform:translateY(-7px) rotate(-4
   body.mode-mobile .panel-scroll{height:auto;min-height:100vh;overflow:visible;padding:84px 20px 60px}
   body.mode-mobile .hero .panel-scroll{min-height:100vh}
 
+  /* MOBİL: içerik her zaman görünür olsun (boş sayfa sorununu önler);
+     görünüme girince hafif bir yükselme animasyonu oynar */
+  body.mode-mobile .reveal{opacity:1;transform:none;transition:none}
+  body.mode-mobile .panel.active .reveal{animation:riseIn .6s ease both}
+
   .nav-inner{flex-wrap:nowrap}
   .nav .desktop-nav{display:none}
   .hamburger{display:block}
@@ -380,10 +388,7 @@ body.menu-open .hamburger span:nth-child(3){transform:translateY(-7px) rotate(-4
         </div>
       </div>
 
-      <div class="nav-item" data-dd="sss">
-        <button class="nav-btn">SSS <span class="caret">▾</span></button>
-        <div class="dropdown" id="dd-sss"><!-- sorular JS ile doldurulur --></div>
-      </div>
+      <div class="nav-item"><button class="nav-btn" data-open="art-sss">SSS</button></div>
 
       <div class="nav-item"><button class="nav-btn" data-open="art-hakkimizda">Hakkımızda</button></div>
       <div class="nav-item"><button class="nav-btn" data-open="art-kaynakca">Kaynakça</button></div>
@@ -756,7 +761,6 @@ let isMobile = false;
 /* ====== SSS LİSTELERİNİ OLUŞTUR ====== */
 (function buildFaq(){
   const list = document.getElementById('faqList');
-  const dd = document.getElementById('dd-sss');
   FAQ.forEach((qa,i)=>{
     const item=document.createElement('div');
     item.className='faq-item';item.id='faq-'+i;
@@ -770,11 +774,6 @@ let isMobile = false;
       else{item.classList.add('open');a.style.maxHeight=a.scrollHeight+'px';}
     });
     list.appendChild(item);
-
-    const link=document.createElement('a');
-    link.innerHTML='<span class="q-num">'+(i+1)+'.</span>'+qa[0];
-    link.addEventListener('click',()=>{ closeDropdowns(); openArticle('art-sss',i); });
-    dd.appendChild(link);
   });
 })();
 
@@ -795,7 +794,7 @@ let isMobile = false;
       ['Oyun Platformlarını Tanımak Neden Önemli?',()=>openArticle('art-platform-2')],
       ['Çocuk Koruma Sistemleri Nasıl Kullanılır?',()=>openArticle('art-platform-3')],
     ]},
-    {head:'SSS', items: FAQ.map((qa,i)=>[ (i+1)+'. '+qa[0], ()=>openArticle('art-sss',i) ])},
+    {head:'SSS', action:()=>{closeMenu();openArticle('art-sss');}},
     {head:'Hakkımızda', action:()=>{closeMenu();openArticle('art-hakkimizda');}},
     {head:'Kaynakça', action:()=>{closeMenu();openArticle('art-kaynakca');}},
   ];
@@ -923,6 +922,7 @@ function openArticle(id, faqIndex){
     });
   }
   overlay.classList.add('open');
+  body.classList.add('overlay-open');
   overlay.scrollTop=0;
   if(isMobile) body.style.overflow='hidden';
 
@@ -939,6 +939,7 @@ function openArticle(id, faqIndex){
 function closeOverlay(){
   if(!overlay.classList.contains('open')) return;
   overlay.classList.remove('open');
+  body.classList.remove('overlay-open');
   if(isMobile) body.style.overflow='';
   setTimeout(()=>{overlayWrap.innerHTML='';},350);
 }
@@ -986,7 +987,7 @@ const io=new IntersectionObserver((entries)=>{
       if(idx>=0){current=idx;updateDots();}
     }
   });
-},{threshold:.4});
+},{threshold:.15});
 
 function setMode(){
   isMobile=mq.matches;
