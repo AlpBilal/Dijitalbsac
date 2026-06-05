@@ -1,0 +1,1018 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dijital Oyun Okur Yazarlığı Rehberi</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Libre+Franklin:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   RENK PALETİ VE TEMEL DEĞİŞKENLER
+   ============================================================ */
+:root{
+  --bg:#ffffff;            /* arka plan beyaz */
+  --ink:#171513;           /* gövde yazıları (siyah) */
+  --navy:#16237a;          /* canlı lacivert navigasyon */
+  --navy-deep:#101a5e;
+  --nav-text:#f6f1e7;      /* navigasyon yazıları (krem/beyaz) */
+  --orange:#d96812;        /* yazı başlıkları (canlı turuncu, abartısız) */
+  --orange-hero:#ff6a00;   /* karşılama başlığı (daha canlı turuncu) */
+  --orange-soft:#fbeede;
+  --subtitle:#6c6258;      /* alt başlık tonu (okunaklı ama ikincil) */
+  --green:#1f9d57;         /* "Devamını gör" butonu */
+  --green-deep:#178047;
+  --line:#e9e3d8;
+  --shadow:0 18px 50px -22px rgba(20,18,15,.35);
+  --serif:'Fraunces',Georgia,serif;
+  --sans:'Libre Franklin',-apple-system,sans-serif;
+}
+
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  font-family:var(--sans);
+  color:var(--ink);
+  background:var(--bg);
+  -webkit-font-smoothing:antialiased;
+  line-height:1.7;
+  overflow:hidden; /* masaüstü modunda sayfa kaydırmayı JS yönetir */
+}
+body.mode-mobile{overflow:auto} /* mobilde normal kaydırma */
+a{color:inherit}
+
+/* faint kağıt dokusu - beyazı korur, hafif derinlik verir */
+body::before{
+  content:"";position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:
+    radial-gradient(120% 90% at 80% -10%, rgba(255,106,0,.05), transparent 60%),
+    radial-gradient(100% 80% at -10% 110%, rgba(22,35,122,.045), transparent 55%);
+}
+
+/* ============================================================
+   NAVİGASYON (sabit / takip eden)
+   ============================================================ */
+.nav{
+  position:fixed;top:0;left:0;right:0;z-index:100;
+  background:linear-gradient(180deg,var(--navy),var(--navy-deep));
+  box-shadow:0 6px 24px -10px rgba(16,26,94,.6);
+}
+.nav-inner{
+  display:flex;align-items:center;gap:2px;flex-wrap:wrap;
+  padding:0 18px;min-height:60px;max-width:1180px;margin:0 auto;
+}
+.nav-item{position:relative}
+.nav-btn{
+  font-family:var(--sans);font-size:.93rem;font-weight:500;letter-spacing:.2px;
+  color:var(--nav-text);background:none;border:none;cursor:pointer;
+  padding:20px 15px;display:inline-flex;align-items:center;gap:6px;
+  transition:color .2s ease;white-space:nowrap;
+}
+.nav-btn:hover,.nav-btn:focus-visible{color:var(--orange-hero);outline:none}
+.nav-btn .caret{font-size:.6rem;opacity:.7;transition:transform .2s ease}
+.nav-item.open .nav-btn .caret{transform:rotate(180deg)}
+.nav-item.open .nav-btn{color:var(--orange-hero)}
+
+.dropdown{
+  position:absolute;top:100%;left:0;min-width:280px;max-width:360px;
+  background:#fff;border:1px solid var(--line);border-radius:12px;
+  box-shadow:var(--shadow);padding:8px;z-index:110;
+  opacity:0;visibility:hidden;transform:translateY(8px);
+  transition:opacity .2s ease,transform .2s ease,visibility .2s;
+  max-height:70vh;overflow-y:auto;
+}
+.nav-item.open .dropdown{opacity:1;visibility:visible;transform:translateY(6px)}
+.dropdown a{
+  display:block;text-decoration:none;color:var(--ink);
+  font-size:.9rem;line-height:1.45;padding:10px 12px;border-radius:8px;
+  cursor:pointer;transition:background .15s ease,color .15s ease;
+}
+.dropdown a:hover{background:var(--orange-soft);color:var(--orange)}
+.dropdown a .q-num{color:var(--orange);font-weight:600;margin-right:7px}
+
+/* hamburger (mobil) */
+.hamburger{display:none;margin-left:auto;background:none;border:none;cursor:pointer;padding:14px}
+.hamburger span{display:block;width:24px;height:2px;background:var(--nav-text);margin:5px 0;transition:.25s}
+body.menu-open .hamburger span:nth-child(1){transform:translateY(7px) rotate(45deg)}
+body.menu-open .hamburger span:nth-child(2){opacity:0}
+body.menu-open .hamburger span:nth-child(3){transform:translateY(-7px) rotate(-45deg)}
+
+/* ============================================================
+   FULLPAGE BÖLÜMLERİ
+   ============================================================ */
+.fullpage{position:relative;height:100vh;width:100%;overflow:hidden;z-index:1}
+.panel{
+  position:absolute;top:0;left:0;width:100%;height:100vh;
+  transition:transform .8s cubic-bezier(.77,0,.18,1);
+  will-change:transform;
+}
+.panel-scroll{
+  height:100vh;overflow-y:auto;overflow-x:hidden;
+  padding:90px 24px 70px;
+  -webkit-overflow-scrolling:touch;
+  scrollbar-width:thin;scrollbar-color:#cdc6ba transparent;
+}
+.panel-scroll::-webkit-scrollbar{width:9px}
+.panel-scroll::-webkit-scrollbar-thumb{background:#d6cfc2;border-radius:6px;border:2px solid #fff}
+.panel-inner{max-width:780px;margin:0 auto}
+
+/* içerik açılış animasyonu (başlıktan aşağı) */
+.reveal{opacity:0;transform:translateY(26px);transition:opacity .7s ease,transform .7s cubic-bezier(.2,.7,.2,1)}
+.panel.active .reveal{opacity:1;transform:none}
+.panel.active .reveal:nth-child(1){transition-delay:.08s}
+.panel.active .reveal:nth-child(2){transition-delay:.20s}
+.panel.active .reveal:nth-child(3){transition-delay:.30s}
+.panel.active .reveal:nth-child(4){transition-delay:.38s}
+.panel.active .reveal:nth-child(5){transition-delay:.46s}
+
+/* ---- HERO ---- */
+.hero .panel-scroll{display:flex;align-items:center;justify-content:center}
+.hero-inner{text-align:center;max-width:880px}
+.hero-eyebrow{
+  display:inline-block;font-size:.78rem;letter-spacing:.32em;text-transform:uppercase;
+  color:var(--navy);font-weight:600;margin-bottom:24px;
+  padding:7px 16px;border:1px solid var(--line);border-radius:40px;background:#fff;
+}
+.hero-title{
+  font-family:var(--serif);font-weight:600;color:var(--orange-hero);
+  font-size:clamp(2.5rem,6.4vw,5.1rem);line-height:1.02;letter-spacing:-.015em;
+}
+.hero-sub{
+  font-family:var(--serif);font-style:italic;font-weight:400;
+  color:var(--subtitle);font-size:clamp(1.15rem,2.6vw,1.7rem);
+  margin-top:22px;letter-spacing:.01em;
+}
+.scroll-cue{
+  margin-top:54px;background:none;border:none;cursor:pointer;
+  display:inline-flex;flex-direction:column;align-items:center;gap:10px;
+  color:var(--navy);font-size:.74rem;letter-spacing:.22em;text-transform:uppercase;font-weight:600;
+}
+.scroll-cue .chev{
+  width:40px;height:40px;border-radius:50%;border:1.6px solid var(--navy);
+  display:flex;align-items:center;justify-content:center;animation:bob 1.8s ease-in-out infinite;
+}
+.scroll-cue:hover .chev{background:var(--navy);color:#fff}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(7px)}}
+
+/* ---- MAKALE PANELLERİ ---- */
+.art-kicker{
+  font-size:.74rem;letter-spacing:.28em;text-transform:uppercase;font-weight:600;
+  color:var(--navy);margin-bottom:18px;display:flex;align-items:center;gap:12px;
+}
+.art-kicker::after{content:"";flex:1;height:1px;background:var(--line)}
+.art-title{
+  font-family:var(--serif);font-weight:600;color:var(--orange);
+  font-size:clamp(1.9rem,4.2vw,3rem);line-height:1.08;letter-spacing:-.01em;margin-bottom:26px;
+}
+.art-body p{font-size:1.06rem;margin-bottom:1.25em;color:#262219}
+.art-body p:last-child{margin-bottom:0}
+.art-body a{color:var(--navy);font-weight:600;text-decoration:underline;text-decoration-color:rgba(22,35,122,.35);text-underline-offset:3px}
+.art-body a:hover{color:var(--orange);text-decoration-color:var(--orange)}
+.art-body h3{
+  font-family:var(--serif);font-weight:600;color:var(--orange);
+  font-size:1.45rem;margin:1.6em 0 .55em;
+}
+
+/* kaynak listesi (Makale 4 ve destek kaynakları) */
+.reslist{list-style:none;margin:.4em 0 0;border-top:1px solid var(--line)}
+.reslist li{padding:16px 0;border-bottom:1px solid var(--line)}
+.reslist .r-name{font-weight:600;color:var(--ink);font-size:1.02rem}
+.reslist .r-desc{color:#4f4a40;font-size:.97rem;margin:3px 0 6px}
+.reslist .r-link{font-size:.9rem;word-break:break-word}
+
+/* ---- KATEGORİ (diğer yazılarımız) ---- */
+.cat-inner{max-width:1080px}
+.cat-title{
+  font-family:var(--serif);font-weight:600;color:var(--orange);
+  font-size:clamp(1.6rem,3.4vw,2.4rem);line-height:1.15;text-align:center;
+  max-width:760px;margin:0 auto 44px;
+}
+.cat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(225px,1fr));gap:24px}
+.cat-card{
+  background:#fff;border:1px solid var(--line);border-radius:16px;overflow:hidden;
+  display:flex;flex-direction:column;box-shadow:0 10px 30px -22px rgba(20,18,15,.4);
+  transition:transform .25s ease,box-shadow .25s ease,border-color .25s ease;
+}
+.cat-card:hover{transform:translateY(-5px);box-shadow:var(--shadow);border-color:#d8d0c2}
+.cat-card .card-top{position:relative}
+.cat-card .card-cat{
+  position:absolute;top:12px;left:12px;z-index:2;
+  font-size:.66rem;letter-spacing:.14em;text-transform:uppercase;font-weight:700;
+  background:rgba(22,35,122,.92);color:#fff;padding:5px 10px;border-radius:30px;
+}
+.card-title{
+  font-family:var(--serif);font-weight:600;color:var(--orange);
+  font-size:1.16rem;line-height:1.22;padding:18px 18px 0;
+}
+.card-excerpt{font-size:.92rem;color:#4f4a40;padding:10px 18px 18px;flex:1}
+.card-btn{
+  margin:0 18px 18px;background:var(--green);color:#fff;border:none;border-radius:10px;
+  font-family:var(--sans);font-weight:600;font-size:.92rem;padding:12px 16px;cursor:pointer;
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;transition:background .2s ease,transform .15s ease;
+}
+.card-btn:hover{background:var(--green-deep);transform:translateY(-1px)}
+.card-btn .arr{transition:transform .2s ease}
+.card-btn:hover .arr{transform:translateX(3px)}
+
+/* ---- GÖRSEL YUVASI (kullanıcı kendi görselini ekleyecek) ---- */
+.img-slot{
+  position:relative;width:100%;aspect-ratio:16/10;background:
+    repeating-linear-gradient(45deg,#f3eee4,#f3eee4 12px,#efe8da 12px,#efe8da 24px);
+  display:flex;align-items:center;justify-content:center;overflow:hidden;border-bottom:1px solid var(--line);
+}
+.img-slot img{width:100%;height:100%;object-fit:cover;display:block}
+.img-slot .img-label{
+  font-size:.8rem;color:#9a9080;font-weight:600;letter-spacing:.04em;text-align:center;padding:0 14px;
+}
+.img-slot:has(img) .img-label{display:none}
+.img-slot:has(img){background:none}
+/* makale üstü büyük görsel */
+.art-hero-img{aspect-ratio:21/9;border-radius:16px;border:1px solid var(--line);margin-bottom:30px}
+
+/* ---- KAYDIRMA NOKTALARI (sağ) ---- */
+.dots{position:fixed;right:22px;top:50%;transform:translateY(-50%);z-index:90;display:flex;flex-direction:column;gap:13px}
+.dots button{
+  width:11px;height:11px;border-radius:50%;border:1.6px solid var(--navy);
+  background:transparent;cursor:pointer;padding:0;transition:.25s;position:relative;
+}
+.dots button:hover{background:rgba(22,35,122,.3)}
+.dots button.on{background:var(--orange-hero);border-color:var(--orange-hero);transform:scale(1.25)}
+
+/* ============================================================
+   OVERLAY (yan yazılar / Hakkımızda / Kaynakça sayfaları)
+   ============================================================ */
+.overlay{
+  position:fixed;inset:0;z-index:50;background:var(--bg);
+  overflow-y:auto;opacity:0;visibility:hidden;transition:opacity .35s ease,visibility .35s;
+}
+.overlay.open{opacity:1;visibility:visible}
+.overlay-wrap{max-width:820px;margin:0 auto;padding:96px 24px 80px}
+.overlay-close{
+  position:fixed;top:74px;right:24px;z-index:60;background:#fff;border:1px solid var(--line);
+  border-radius:40px;padding:9px 18px 9px 14px;cursor:pointer;font-family:var(--sans);font-weight:600;
+  font-size:.86rem;color:var(--navy);display:inline-flex;align-items:center;gap:7px;box-shadow:var(--shadow);
+  transition:background .2s,color .2s;
+}
+.overlay-close:hover{background:var(--navy);color:#fff}
+.overlay .art-title{margin-bottom:24px}
+
+/* SSS akordeon */
+.faq-intro{color:#4f4a40;margin-bottom:26px;font-size:1.04rem}
+.faq-item{border-bottom:1px solid var(--line)}
+.faq-item:first-of-type{border-top:1px solid var(--line)}
+.faq-q{
+  width:100%;text-align:left;background:none;border:none;cursor:pointer;
+  font-family:var(--serif);font-weight:600;color:var(--ink);font-size:1.14rem;line-height:1.3;
+  padding:20px 44px 20px 0;position:relative;display:block;transition:color .2s;
+}
+.faq-q:hover{color:var(--orange)}
+.faq-q .plus{position:absolute;right:6px;top:22px;width:20px;height:20px;transition:transform .3s}
+.faq-q .plus::before,.faq-q .plus::after{content:"";position:absolute;background:var(--orange);border-radius:2px}
+.faq-q .plus::before{top:9px;left:0;width:20px;height:2px}
+.faq-q .plus::after{left:9px;top:0;width:2px;height:20px;transition:transform .3s}
+.faq-item.open .faq-q{color:var(--orange)}
+.faq-item.open .plus::after{transform:rotate(90deg);opacity:0}
+.faq-a{max-height:0;overflow:hidden;transition:max-height .4s ease}
+.faq-a-inner{padding:0 0 22px;color:#363127;font-size:1.02rem}
+
+/* Hakkımızda */
+.about-amac{background:var(--orange-soft);border:1px solid #f0dcc2;border-radius:16px;padding:30px 30px 32px;margin-bottom:42px}
+.about-amac h3{font-family:var(--serif);color:var(--orange);font-size:1.5rem;margin-bottom:14px}
+.about-amac p{font-size:1.06rem;color:#3a3329}
+.about-team-title{font-family:var(--serif);font-weight:600;color:var(--orange);font-size:1.5rem;margin-bottom:22px}
+.member{display:flex;align-items:center;gap:18px;padding:18px 0;border-bottom:1px solid var(--line)}
+.member:first-of-type{border-top:1px solid var(--line)}
+.member .avatar{
+  width:50px;height:50px;border-radius:50%;flex:none;background:linear-gradient(135deg,var(--navy),#2a3aa8);
+  color:#fff;display:flex;align-items:center;justify-content:center;font-family:var(--serif);font-weight:600;font-size:1.15rem;
+}
+.member .m-name{font-weight:600;color:var(--ink);font-size:1.08rem}
+.member .m-role{color:var(--subtitle);font-size:.94rem}
+
+/* Kaynakça */
+.kaynak-group{margin-bottom:40px}
+.kaynak-group h3{font-family:var(--serif);font-weight:600;color:var(--orange);font-size:1.4rem;margin-bottom:6px}
+.kaynak-group .grp-line{height:2px;background:var(--orange);width:54px;margin-bottom:18px;border-radius:2px}
+.kaynak-item{padding:13px 0;border-bottom:1px solid var(--line)}
+.kaynak-item .k-src{font-weight:500;color:var(--ink);font-size:.99rem;line-height:1.4}
+.kaynak-item a{font-size:.86rem;color:var(--navy);word-break:break-all;text-decoration:underline;text-decoration-color:rgba(22,35,122,.3);text-underline-offset:2px}
+.kaynak-item a:hover{color:var(--orange)}
+
+/* mobil menü paneli */
+.mobile-menu{display:none}
+
+/* ============================================================
+   MOBİL UYUMLULUK
+   ============================================================ */
+@media (max-width:820px){
+  body.mode-mobile .fullpage{height:auto;overflow:visible}
+  body.mode-mobile .panel{position:relative;height:auto;min-height:100vh;transform:none!important}
+  body.mode-mobile .panel-scroll{height:auto;min-height:100vh;overflow:visible;padding:84px 20px 60px}
+  body.mode-mobile .hero .panel-scroll{min-height:100vh}
+
+  .nav-inner{flex-wrap:nowrap}
+  .nav .desktop-nav{display:none}
+  .hamburger{display:block}
+  .dots{display:none}
+
+  /* mobil açılır menü */
+  .mobile-menu{
+    display:block;position:fixed;top:60px;left:0;right:0;bottom:0;z-index:95;
+    background:linear-gradient(180deg,var(--navy),var(--navy-deep));
+    padding:14px 18px 40px;overflow-y:auto;
+    transform:translateX(100%);transition:transform .3s ease;
+  }
+  body.menu-open .mobile-menu{transform:translateX(0)}
+  .mm-block{border-bottom:1px solid rgba(255,255,255,.14)}
+  .mm-head{
+    width:100%;text-align:left;background:none;border:none;color:var(--nav-text);
+    font-family:var(--sans);font-weight:600;font-size:1.05rem;padding:16px 4px;cursor:pointer;
+    display:flex;justify-content:space-between;align-items:center;
+  }
+  .mm-head .c{transition:transform .25s;opacity:.7;font-size:.8rem}
+  .mm-block.open .mm-head{color:var(--orange-hero)}
+  .mm-block.open .mm-head .c{transform:rotate(180deg)}
+  .mm-sub{max-height:0;overflow:hidden;transition:max-height .35s ease}
+  .mm-sub a{display:block;color:#d9d4e8;font-size:.93rem;padding:9px 4px 9px 16px;text-decoration:none;cursor:pointer;line-height:1.4}
+  .mm-sub a:active{color:var(--orange-hero)}
+
+  .overlay-close{top:70px;right:16px}
+  .overlay-wrap{padding:84px 18px 60px}
+  .art-hero-img{aspect-ratio:16/9}
+  .cat-grid{grid-template-columns:1fr;gap:18px}
+}
+
+@media (prefers-reduced-motion:reduce){
+  .panel{transition:none}
+  .reveal{transition:none;opacity:1;transform:none}
+  .scroll-cue .chev{animation:none}
+}
+</style>
+</head>
+<body>
+
+<!-- ============================================================
+     NAVİGASYON
+     ============================================================ -->
+<nav class="nav">
+  <div class="nav-inner">
+    <div class="desktop-nav" style="display:flex;align-items:center;gap:2px;flex-wrap:wrap">
+      <div class="nav-item"><button class="nav-btn" data-home>Ana Sayfa</button></div>
+
+      <div class="nav-item" data-dd="anayazi">
+        <button class="nav-btn">Ana Yazılarımız <span class="caret">▾</span></button>
+        <div class="dropdown">
+          <a data-goto="1">Biz Kimiz?</a>
+          <a data-goto="2">Dijital Oyunlara Yönelik Önyargıları Yeniden Düşünmek</a>
+          <a data-goto="3">Önyargıyı Kırmak: Yasaklamak Yerine Anlamak</a>
+          <a data-goto="4">Dijital Medya Riskleri: Sorun Sadece Oyunlar Değil</a>
+          <a data-goto="5">Aileler Oyunları Ne Kadar Tanıyor?</a>
+        </div>
+      </div>
+
+      <div class="nav-item" data-dd="platform">
+        <button class="nav-btn">Platformlar ve Yaş Sınırlamaları <span class="caret">▾</span></button>
+        <div class="dropdown">
+          <a data-open="art-platform-1">Yaş Derecelendirmeleri: Dijital Oyunlarda Bilinçli Seçimin İlk Adımı</a>
+          <a data-open="art-platform-2">Oyun Platformlarını Tanımak Neden Önemli?</a>
+          <a data-open="art-platform-3">Çocuk Koruma Sistemleri Nasıl Kullanılır?</a>
+        </div>
+      </div>
+
+      <div class="nav-item" data-dd="sss">
+        <button class="nav-btn">SSS <span class="caret">▾</span></button>
+        <div class="dropdown" id="dd-sss"><!-- sorular JS ile doldurulur --></div>
+      </div>
+
+      <div class="nav-item"><button class="nav-btn" data-open="art-hakkimizda">Hakkımızda</button></div>
+      <div class="nav-item"><button class="nav-btn" data-open="art-kaynakca">Kaynakça</button></div>
+    </div>
+
+    <button class="hamburger" aria-label="Menü"><span></span><span></span><span></span></button>
+  </div>
+</nav>
+
+<!-- mobil menü -->
+<div class="mobile-menu" id="mobileMenu"></div>
+
+<!-- ============================================================
+     ANA AKIŞ (Hero + 5 Ana Yazı + Kategori)
+     ============================================================ -->
+<div class="fullpage" id="fullpage">
+
+  <!-- HERO (0) -->
+  <section class="panel hero active" data-index="0">
+    <div class="panel-scroll">
+      <div class="panel-inner hero-inner">
+        <span class="hero-eyebrow reveal">Bilinçli Dijital Ebeveynlik</span>
+        <h1 class="hero-title reveal">Dijital Oyun Okur Yazarlığı Rehberi</h1>
+        <p class="hero-sub reveal">önyargıdan bilince, yasaktan rehberliğe</p>
+        <button class="scroll-cue reveal" data-goto="1">
+          <span>Keşfetmeye Başla</span>
+          <span class="chev">▾</span>
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ANA YAZI 1 (1) -->
+  <section class="panel" data-index="1">
+    <div class="panel-scroll"><div class="panel-inner">
+      <div class="art-kicker reveal">Ana Yazı · 01</div>
+      <h2 class="art-title reveal">Biz Kimiz?</h2>
+      <div class="art-body reveal">
+        <p>Biz, dijital oyunlara yönelik toplumsal önyargıları araştırma verileriyle sorgulamayı amaçlayan bir araştırma ekibiyiz. Bu siteyi; özellikle ebeveynlerin dijital oyunlar hakkında daha bilinçli kararlar almasına yardımcı olmak, oyunları yalnızca “zararlı” ya da “faydalı” gibi tek yönlü yargılarla değil; yaş uygunluğu, içerik, kullanım süresi ve aile rehberliği çerçevesinde değerlendirmek için hazırladık. Amacımız, dijital oyunları savunmak ya da yasaklamak değil; onları doğru bilgiyle daha güvenli ve dengeli biçimde anlamaya katkı sağlamaktır.</p>
+      </div>
+    </div></div>
+  </section>
+
+  <!-- ANA YAZI 2 (2) -->
+  <section class="panel" data-index="2">
+    <div class="panel-scroll"><div class="panel-inner">
+      <div class="art-kicker reveal">Ana Yazı · 02</div>
+      <h2 class="art-title reveal">Dijital Oyunlara Yönelik Önyargıları Yeniden Düşünmek</h2>
+      <div class="art-body reveal">
+        <p>Dijital oyunlar, günümüzde çocukların ve gençlerin en yaygın medya deneyimlerinden biri hâline gelmiştir. Buna rağmen özellikle ebeveynler arasında dijital oyunlar çoğu zaman bağımlılık, akademik başarısızlık, saldırganlık, sosyal izolasyon ve sağlık sorunlarıyla ilişkilendirilmektedir. Bu kaygılar tamamen temelsiz değildir; ancak güncel araştırmalar dijital oyunların çocuklar üzerindeki etkisinin tek yönlü bir “zarar” anlatısıyla açıklanamayacağını göstermektedir.</p>
+        <p>Uluslararası çalışmalar, dijital oyunların etkisinin oyun süresi, içerik, yaşa uygunluk, aile rehberliği ve çocuğun gündelik yaşam dengesiyle birlikte değerlendirilmesi gerektiğini ortaya koymaktadır. Örneğin 9-10 yaş grubundaki yaklaşık 2.000 çocuk üzerinde yürütülen ABCD çalışmasında, günde üç saat ve üzeri oyun oynayan çocukların bazı bilişsel görevlerde, özellikle çalışma belleği ve tepki kontrolü alanlarında daha iyi performans gösterebildiği belirtilmiştir. Buna karşın Dünya Sağlık Örgütü, kontrol kaybı ve gündelik işlevlerde bozulma ile kendini gösteren “oyun oynama bozukluğunu” önemli bir risk alanı olarak tanımlamaktadır.</p>
+        <p>Türkiye’de yapılan araştırmalar da benzer bir dengeye işaret etmektedir. 387 ebeveynle yürütülen bir çalışmada, ebeveynlerin dijital oyunları yalnızca olumsuz görmediği; bazı ebeveynlerin oyunların hızlı düşünme, karar verme, görsel hafıza ve yabancı dil öğrenme gibi alanlarda katkı sağlayabileceğini düşündüğü görülmektedir. Bununla birlikte aşırı kullanım, uyku düzeni, sağlık sorunları ve sosyal ilişkiler ebeveynlerin en güçlü kaygıları arasında yer almaktadır. Türkiye’de 312 lise öğrencisiyle yapılan bir araştırmada öğrencilerin %78,5’inin dijital oyun oynadığı, %16,3’ünün oyun bağımlılığı düzeyinde değerlendirildiği ve %34,9’unun kötü uyku kalitesine sahip olduğu saptanmıştır.</p>
+        <p>Bu nedenle dijital oyunlar hakkında sorulması gereken temel soru “Oyunlar zararlı mı?” değil; “Hangi oyun, hangi çocuk için, hangi süreyle ve hangi rehberlikle oynanıyor?” sorusudur. Bu web sitesi, dijital oyunları koşulsuz biçimde savunmayı ya da tamamen riskli bir alan olarak sunmayı amaçlamaz. Amaç, özellikle ebeveynlerin dijital oyunlara yönelik kaygılarını araştırma verileriyle birlikte ele almak ve önyargıların ötesinde daha dengeli, bilinçli ve eleştirel bir bakış açısı geliştirmektir.</p>
+      </div>
+    </div></div>
+  </section>
+
+  <!-- ANA YAZI 3 (3) -->
+  <section class="panel" data-index="3">
+    <div class="panel-scroll"><div class="panel-inner">
+      <div class="art-kicker reveal">Ana Yazı · 03</div>
+      <h2 class="art-title reveal">Önyargıyı Kırmak: Yasaklamak Yerine Anlamak</h2>
+      <div class="art-body reveal">
+        <p>Dijital oyunlara yönelik önyargıların kırılması, oyunları koşulsuz biçimde savunmakla değil; onları doğru biçimde tanımak ve değerlendirmekle mümkündür. Ebeveynler ve genel medya kullanıcıları için en önemli adım, dijital oyunları tek bir kategori olarak görmemektir. Çünkü her oyun aynı içeriğe, aynı yaş grubuna, aynı etkileşim biçimine ya da aynı etkiye sahip değildir. Bir eğitsel oyun, çevrim içi rekabetçi bir oyun, hikâye temelli bir macera oyunu ya da yetişkinlere yönelik bir aksiyon oyunu aynı şekilde değerlendirilemez.</p>
+        <p>Bu noktada bilinçlendirme süreci üç temel başlık üzerinden kurulmalıdır: içerik bilgisi, yaş uygunluğu ve kullanım dengesi. Ebeveynler bir oyunu değerlendirirken yalnızca oyunun popülerliğine ya da çocuğun isteğine değil; yaş derecelendirmesine, içerik açıklamalarına, çevrim içi iletişim özelliklerine ve oyun içi satın alma uyarılarına da dikkat etmelidir. Genel medya kullanıcıları ise dijital oyunlarla ilgili haberleri ya da toplumsal tartışmaları değerlendirirken, tekil olumsuz örneklerden yola çıkarak tüm oyun kültürünü genelleştirmemelidir.</p>
+        <p>Önyargının yerine bilinçli yaklaşımı koymak için yasaklayıcı değil, rehberlik edici bir tutum benimsenmelidir. Çocukla oynadığı oyun hakkında konuşmak, oyunun amacını ve içeriğini birlikte incelemek, süre sınırını birlikte belirlemek ve platformların sunduğu koruma sistemlerinden yararlanmak bu sürecin temel parçalarıdır. Böylece dijital oyunlar aile içinde çatışma konusu olmaktan çıkıp, çocuğun medya kullanımını anlamaya yönelik bir iletişim alanına dönüşebilir.</p>
+        <p>Bu projenin amacı da dijital oyunlara dair yaygın korkuları görmezden gelmek değil; bu korkuları araştırma verileri, yaş sınıflandırma sistemleri ve platform bilgileriyle daha sağlıklı bir zemine taşımaktır. Dijital oyunlara yönelik önyargı, bilgi eksikliğinden beslendiğinde güçlenir; fakat ebeveynler ve kullanıcılar oyunları nasıl değerlendireceklerini öğrendikçe, daha dengeli ve bilinçli kararlar almak mümkün hâle gelir.</p>
+      </div>
+    </div></div>
+  </section>
+
+  <!-- ANA YAZI 4 (4) -->
+  <section class="panel" data-index="4">
+    <div class="panel-scroll"><div class="panel-inner">
+      <div class="art-kicker reveal">Ana Yazı · 04</div>
+      <h2 class="art-title reveal">Dijital Medya Riskleri: Sorun Sadece Oyunlar Değil</h2>
+      <div class="art-body reveal">
+        <p>Çocukların dijital dünyada karşılaşabileceği olumsuz durumlar yalnızca dijital oyunlarla sınırlı değildir. Sosyal medya platformları, video uygulamaları, mesajlaşma servisleri, mobil uygulamalar, reklam sistemleri ve algoritmik öneri mekanizmaları da çocukların medya deneyimini doğrudan etkiler. Bu nedenle bir çocukta görülen dikkat dağınıklığı, uyku düzensizliği, içe kapanma, kaygı, öfke, sosyal karşılaştırma, siber zorbalığa maruz kalma veya aşırı ekran kullanımı gibi durumları yalnızca “oyun oynama” davranışıyla açıklamak eksik bir değerlendirme olur.</p>
+        <p>Günümüz çocukları teknolojiyle iç içe büyümektedir. Bu gerçekliği tamamen yok saymak ya da dijital araçları bütünüyle yasaklamak çoğu zaman kalıcı bir çözüm üretmez. Daha etkili yaklaşım, çocukları dijital dünyadan koparmak değil; onları bu dünyaya bilinçli, güvenli ve dengeli biçimde hazırlamaktır. Çünkü dijital medya doğru kullanıldığında öğrenme, iletişim, yaratıcılık ve problem çözme açısından fırsatlar sunabilir; kontrolsüz kullanıldığında ise psikolojik iyi oluş, uyku düzeni, sosyal ilişkiler ve akademik yaşam üzerinde riskler oluşturabilir.</p>
+        <p>Bu noktada ebeveynlerin temel görevi yalnızca denetlemek değil, rehberlik etmektir. Çocuğun hangi oyunu oynadığı, hangi sosyal medya içeriklerini takip ettiği, kimlerle iletişim kurduğu, ekran başında ne kadar zaman geçirdiği ve dijital içeriklerden duygusal olarak nasıl etkilendiği birlikte değerlendirilmelidir. Ebeveynler çocuklarıyla suçlayıcı olmayan bir dille konuşmalı, dijital medya kullanımına dair aile içi kurallar oluşturmalı ve bu kuralları yalnızca yasak üzerinden değil, nedenleriyle birlikte açıklamalıdır.</p>
+        <p>Ebeveynleri bilinçlendirmek için üç temel adım önemlidir. İlk olarak, dijital medya tek bir kategori olarak görülmemelidir. Bir eğitim uygulaması, bir sosyal medya akışı, bir çevrim içi oyun ve bir kısa video platformu çocuğu aynı biçimde etkilemez. İkinci olarak, ekran süresi kadar ekran içeriği de önemlidir. Çocuğun ne izlediği, ne oynadığı, neye maruz kaldığı ve bu içerikle nasıl etkileşime geçtiği dikkate alınmalıdır. Üçüncü olarak, aile içi iletişim dijital güvenliğin temelidir. Çocuk, internette karşılaştığı rahatsız edici bir içerik, zorbalık, tehdit, uygunsuz mesaj ya da yoğun kaygı durumunda ailesiyle konuşabileceğini bilmelidir.</p>
+        <p>Çocuklarda dijital medya kullanımıyla ilişkili olabilecek bazı psikolojik belirtiler ebeveynler tarafından dikkatle izlenmelidir. Uzun süreli uyku bozuklukları, okul başarısında belirgin düşüş, sosyal ilişkilerden uzaklaşma, sürekli sinirlilik, yoğun kaygı, mutsuzluk, ekran başından ayrılamama, oyun ya da sosyal medya kullanımı engellendiğinde aşırı tepki verme, gerçek yaşam etkinliklerinden kopma ve çevrim içi ortamlarda zorbalığa maruz kalma bu belirtiler arasında yer alabilir. Bu durumlar görüldüğünde amaç çocuğu cezalandırmak değil, sorunun kaynağını anlamaya çalışmak olmalıdır.</p>
+        <p>Ebeveynler bu süreçte öncelikle çocukla açık bir konuşma yapmalı, ekran kullanımının hangi ihtiyaçtan beslendiğini anlamaya çalışmalıdır. Bazı çocuklar dijital oyunları ya da sosyal medyayı yalnızca eğlenmek için değil; yalnızlık, stres, başarısızlık duygusu, arkadaş ilişkilerindeki sorunlar veya kaygıdan uzaklaşmak için de kullanabilir. Bu nedenle dijital medya kullanımı bazen asıl sorunun kendisi değil, daha derindeki bir duygusal ihtiyacın göstergesi olabilir.</p>
+        <p>Eğer belirtiler uzun süre devam ediyor, çocuğun okul yaşamını, aile ilişkilerini, uyku düzenini veya sosyal hayatını belirgin biçimde etkiliyorsa profesyonel destek alınmalıdır. Ebeveynler okul rehberlik servisine, çocuk ve ergen psikiyatristlerine, psikologlara veya ilgili danışmanlık merkezlerine başvurabilir. Acil risk, kendine zarar verme düşüncesi, ciddi kriz veya güvenlik tehdidi varsa en yakın sağlık kuruluşuna başvurulmalı ya da 112 Acil Çağrı Merkezi aranmalıdır.</p>
+        <p>Ebeveynlerin yararlanabileceği bazı güvenilir kaynaklar şunlardır:</p>
+        <ul class="reslist">
+          <li><div class="r-name">MHRS – Merkezi Hekim Randevu Sistemi</div><div class="r-desc">Çocuk ve ergen ruh sağlığı uzmanlarından randevu almak için kullanılabilir.</div><a class="r-link" href="https://www.mhrs.gov.tr" target="_blank" rel="noopener">https://www.mhrs.gov.tr</a></li>
+          <li><div class="r-name">Alo 182</div><div class="r-desc">Sağlık Bakanlığı hastane randevu hattıdır. Çocuk ve ergen psikiyatrisi randevuları için kullanılabilir.</div></li>
+          <li><div class="r-name">YEDAM – Yeşilay Danışmanlık Merkezi</div><div class="r-desc">Teknoloji, oyun ve internet bağımlılığı gibi konularda bireylere ve ailelere ücretsiz psikolojik ve sosyal destek sunar.</div><a class="r-link" href="https://www.yedam.org.tr" target="_blank" rel="noopener">https://www.yedam.org.tr</a></li>
+          <li><div class="r-name">Güvenli Web</div><div class="r-desc">BTK tarafından desteklenen, güvenli ve bilinçli internet kullanımı hakkında ailelere yönelik bilgiler sunan kaynaktır.</div><a class="r-link" href="https://www.guvenliweb.org.tr" target="_blank" rel="noopener">https://www.guvenliweb.org.tr</a></li>
+          <li><div class="r-name">Aile ve Sosyal Hizmetler Bakanlığı Dijital Ebeveyn Rehberi</div><div class="r-desc">Ailelerin çocukları dijital risklerden korumasına yönelik rehber içerikler sunar.</div><a class="r-link" href="https://www.aile.gov.tr" target="_blank" rel="noopener">https://www.aile.gov.tr</a></li>
+          <li><div class="r-name">UNICEF Dijital Ebeveynlik</div><div class="r-desc">Çocukların dijital dünyada güvenli, dengeli ve bilinçli biçimde desteklenmesine yönelik uluslararası bilgiler içerir.</div><a class="r-link" href="https://www.unicef.org/parenting/digital-parenting" target="_blank" rel="noopener">https://www.unicef.org/parenting/digital-parenting</a></li>
+          <li><div class="r-name">American Academy of Pediatrics Family Media Plan</div><div class="r-desc">Ailelerin ekran süresi, içerik seçimi ve medya kullanımı konusunda plan oluşturmasına yardımcı olur.</div><a class="r-link" href="https://www.healthychildren.org/English/fmp/Pages/MediaPlan.aspx" target="_blank" rel="noopener">https://www.healthychildren.org/English/fmp/Pages/MediaPlan.aspx</a></li>
+        </ul>
+        <p style="margin-top:1.25em">Sonuç olarak, çocukların dijital medya ile ilişkisini yalnızca oyunlar üzerinden değerlendirmek yeterli değildir. Dijital oyunlar, sosyal medya, mobil uygulamalar ve çevrim içi iletişim ortamları birlikte ele alınmalıdır. Ebeveynler için en sağlıklı yaklaşım, teknolojiyi tamamen reddetmek yerine çocuklara dijital dünyada güvenli hareket etmeyi öğretmek, açık iletişim kurmak, gerekli sınırları belirlemek ve ihtiyaç duyulduğunda profesyonel destek almaktır.</p>
+      </div>
+    </div></div>
+  </section>
+
+  <!-- ANA YAZI 5 (5) -->
+  <section class="panel" data-index="5">
+    <div class="panel-scroll"><div class="panel-inner">
+      <div class="art-kicker reveal">Ana Yazı · 05</div>
+      <h2 class="art-title reveal">Aileler Oyunları Ne Kadar Tanıyor?</h2>
+      <div class="art-body reveal">
+        <p>Dijital oyunlara yönelik ebeveyn kaygılarının önemli bir bölümü, oyunların yeterince tanınmamasından kaynaklanmaktadır. Birçok aile için “çocuğum oyun oynuyor” ifadesi, oyunun türü, içeriği, yaş uygunluğu, çevrim içi etkileşim özellikleri veya oyun içi satın alma yapısı bilinmediğinde belirsiz ve kaygı verici hâle gelir. Oysa dijital oyunlar tek bir kategori değildir. Bir bulmaca oyunu, spor oyunu, eğitsel oyun, çevrim içi rekabetçi oyun ya da yetişkinlere yönelik aksiyon oyunu aynı şekilde değerlendirilemez.</p>
+        <p>Bu nedenle ebeveynlerin çocuklarının oynadığı oyunları yalnızca isim olarak değil, içerik ve kullanım bağlamı açısından da tanıması gerekir. Bir oyunun hangi yaş grubuna uygun olduğu, şiddet ya da korku unsuru içerip içermediği, çevrim içi sohbet özelliği bulunup bulunmadığı, oyun içi satın alma ya da reklam sistemi barındırıp barındırmadığı ebeveynler için temel bilgi başlıklarıdır. Bu bilgiler bilinmediğinde, oyunlara yönelik önyargılar güçlenebilir; ancak bilgi arttıkça ebeveynler daha dengeli ve doğru kararlar alabilir.</p>
+        <p>Ailelerin oyunlar hakkında bilgi alabileceği en yararlı kaynaklardan biri Common Sense Media sitesidir. Bu site, oyunlar hakkında yaş önerileri, ebeveyn yorumları, içerik uyarıları ve çocuklar için uygunluk değerlendirmeleri sunar. Oyunların tamamını kapsayan tek ve eksiksiz bir kaynak bulunmasa da Common Sense Media, ebeveynler için en anlaşılır ve pratik rehberlerden biridir. Siteye şu bağlantıdan ulaşılabilir: <a href="https://www.commonsensemedia.org/game-reviews" target="_blank" rel="noopener">https://www.commonsensemedia.org/game-reviews</a></p>
+        <p>Yaş derecelendirmesi konusunda ek olarak ESRB ve PEGI veritabanları da kullanılabilir. ESRB özellikle Amerika merkezli oyun derecelendirmelerini, PEGI ise Avrupa’da yaygın kullanılan yaş sınıflandırmalarını gösterir. Bu sitelerde oyun adı aratılarak yaş etiketi, içerik tanımlayıcıları ve bazı durumlarda çevrim içi etkileşim ya da oyun içi satın alma bilgileri görülebilir: <a href="https://www.esrb.org/" target="_blank" rel="noopener">https://www.esrb.org/</a> &nbsp;·&nbsp; <a href="https://pegi.info/search-pegi" target="_blank" rel="noopener">https://pegi.info/search-pegi</a></p>
+        <p>Ebeveynler için bir diğer önemli öneri, çocuklarıyla oyunlar hakkında yalnızca dışarıdan konuşmak değil, mümkün olduğunda onlarla birlikte oyun deneyimi yaşamaktır. Bir oyunu birlikte oynamak ya da çocuğun oynadığı oyunu yanında izlemek, ebeveynin oyun içeriğini daha iyi anlamasını sağlar. Aynı zamanda çocukla iletişimi güçlendirir, oyun hakkında yargılayıcı değil açıklayıcı bir konuşma zemini oluşturur. Bu yaklaşım, “Ne oynuyorsun?” sorusunu “Bana bu oyunu anlatır mısın?” sorusuna dönüştürür. Böylece oyun, aile içinde yalnızca çatışma konusu olmaktan çıkarak ortak bir deneyim alanına dönüşebilir.</p>
+        <p>Aileyle birlikte oynanabilecek oyunlar seçilirken yalnızca çok oyunculu olmasına değil, yaş uygunluğuna, içerik yapısına ve aile içi etkileşimi destekleyip desteklemediğine dikkat edilmelidir. Örneğin Mario Kart 8 Deluxe, Super Mario Bros. Wonder, Super Mario Party Jamboree, Animal Crossing: New Horizons, Minecraft, LEGO oyunları, Sackboy: A Big Adventure, Stardew Valley, Just Dance, Overcooked 2, Moving Out ve küçük yaş grupları için Bluey: The Videogame ailelerin birlikte deneyimleyebileceği oyunlar arasında gösterilebilir. Bu oyunlar genel olarak aile dostu seçenekler olarak bilinse de her aile, çocuğun yaşına ve hassasiyetlerine göre oyunun yaş derecelendirmesini ayrıca kontrol etmelidir.</p>
+        <p>Bu noktada amaç, ebeveynlerin tüm oyunları uzman düzeyinde bilmesi değildir. Amaç, çocukların oyun dünyasına tamamen yabancı kalmamak, temel soruları sormayı öğrenmek ve gerektiğinde güvenilir kaynaklardan bilgi almaktır. Ebeveyn bir oyunu tanıdığında, çocukla daha sağlıklı iletişim kurabilir; hangi içeriklerin uygun olduğunu daha bilinçli değerlendirebilir ve dijital oyunları yasaklamak yerine daha güvenli biçimde yönetebilir.</p>
+        <p>Sonuç olarak, dijital oyunlara yönelik önyargının azalması için ailelerin oyunları tanıması büyük önem taşır. Çocuğun oynadığı oyunu araştırmak, yaş derecelendirmesine bakmak, oyun içeriğini birlikte incelemek ve zaman zaman çocukla birlikte oyun oynamak; ebeveynleri daha bilinçli, çocukları ise daha güvenli bir dijital deneyime yaklaştırır.</p>
+      </div>
+    </div></div>
+  </section>
+
+  <!-- KATEGORİ / DİĞER YAZILAR (6) -->
+  <section class="panel cat" data-index="6">
+    <div class="panel-scroll"><div class="panel-inner cat-inner">
+      <h2 class="cat-title reveal">dijital oyun dünyasını daha iyi tanımak için diğer yazılarımıza da bakın</h2>
+      <div class="cat-grid reveal">
+
+        <article class="cat-card">
+          <div class="card-top">
+            <span class="card-cat">Platformlar &amp; Yaş</span>
+            <!-- GÖRSEL 1: Aşağıdaki yorum satırını silip kendi görselinizle değiştirin.
+                 Örnek:  <img src="gorsel-yas-derecelendirme.jpg" alt="Yaş derecelendirmeleri">
+                 NOT: Bu görsel, yazının açılan sayfasındaki üst görselle AYNI olmalı. -->
+            <div class="img-slot"><span class="img-label">Görsel 1<br>(buraya eklenecek)</span></div>
+          </div>
+          <h3 class="card-title">Yaş Derecelendirmeleri: Dijital Oyunlarda Bilinçli Seçimin İlk Adımı</h3>
+          <p class="card-excerpt">Dijital oyunlar, çoğu zaman çocuklar için tamamen denetimsiz bir alan gibi görülse de oyun platformlarında yaşa uygunluk konusunda farklı derecelendirme sistemleri kullanılmaktadır…</p>
+          <button class="card-btn" data-open="art-platform-1">Devamını gör <span class="arr">→</span></button>
+        </article>
+
+        <article class="cat-card">
+          <div class="card-top">
+            <span class="card-cat">Platformlar &amp; Yaş</span>
+            <!-- GÖRSEL 2: kendi görselinizle değiştirin. Açılan yazıdaki üst görselle aynı olmalı. -->
+            <div class="img-slot"><span class="img-label">Görsel 2<br>(buraya eklenecek)</span></div>
+          </div>
+          <h3 class="card-title">Oyun Platformlarını Tanımak Neden Önemli?</h3>
+          <p class="card-excerpt">Dijital oyunlara yönelik kaygıların önemli bir bölümü, oyunların oynandığı platformların yeterince tanınmamasından kaynaklanmaktadır…</p>
+          <button class="card-btn" data-open="art-platform-2">Devamını gör <span class="arr">→</span></button>
+        </article>
+
+        <article class="cat-card">
+          <div class="card-top">
+            <span class="card-cat">Platformlar &amp; Yaş</span>
+            <!-- GÖRSEL 3: kendi görselinizle değiştirin. Açılan yazıdaki üst görselle aynı olmalı. -->
+            <div class="img-slot"><span class="img-label">Görsel 3<br>(buraya eklenecek)</span></div>
+          </div>
+          <h3 class="card-title">Çocuk Koruma Sistemleri Nasıl Kullanılır?</h3>
+          <p class="card-excerpt">Dijital oyun platformlarında çocukları korumaya yönelik sistemler, yalnızca teknik ayarlardan ibaret değildir…</p>
+          <button class="card-btn" data-open="art-platform-3">Devamını gör <span class="arr">→</span></button>
+        </article>
+
+        <article class="cat-card">
+          <div class="card-top">
+            <span class="card-cat">SSS</span>
+            <!-- GÖRSEL 4: kendi görselinizle değiştirin. Açılan SSS sayfasındaki üst görselle aynı olmalı. -->
+            <div class="img-slot"><span class="img-label">Görsel 4<br>(buraya eklenecek)</span></div>
+          </div>
+          <h3 class="card-title">Sıkça Sorulan Sorular</h3>
+          <p class="card-excerpt">Dijital oyunlar çocuklar için tamamen zararlı mıdır? Oyun süresi ne kadar olmalı? Ebeveynlerin en çok merak ettiği soruları yanıtladık…</p>
+          <button class="card-btn" data-open="art-sss">Devamını gör <span class="arr">→</span></button>
+        </article>
+
+      </div>
+    </div></div>
+  </section>
+
+</div>
+
+<!-- ============================================================
+     OVERLAY (yan yazı sayfaları burada açılır)
+     ============================================================ -->
+<div class="overlay" id="overlay">
+  <button class="overlay-close" id="overlayClose">✕ Kapat</button>
+  <div class="overlay-wrap" id="overlayWrap"></div>
+</div>
+
+<!-- ============================================================
+     YAZI DEPOSU (overlay içine kopyalanır - gizli)
+     ============================================================ -->
+<div id="store" style="display:none">
+
+  <!-- PLATFORM 1 -->
+  <div id="art-platform-1">
+    <div class="art-kicker">Platformlar ve Yaş Sınırlamaları</div>
+    <!-- GÖRSEL 1 (kategori kutusuyla aynı görsel): yorum satırını silip <img src="..."> ekleyin. -->
+    <div class="img-slot art-hero-img"><span class="img-label">Görsel 1 (buraya eklenecek)</span></div>
+    <h2 class="art-title">Yaş Derecelendirmeleri: Dijital Oyunlarda Bilinçli Seçimin İlk Adımı</h2>
+    <div class="art-body">
+      <p>Dijital oyunlar, çoğu zaman çocuklar için tamamen denetimsiz bir alan gibi görülse de oyun platformlarında yaşa uygunluk konusunda farklı derecelendirme sistemleri kullanılmaktadır. Steam, PlayStation, Nintendo, Xbox, Google Play ve App Store gibi platformlarda oyunlar; içerik yapısı, şiddet düzeyi, dil kullanımı, korku unsurları, çevrim içi etkileşim, oyun içi satın alma ve kumar benzeri mekanikler gibi özelliklere göre yaş kategorileriyle sunulur. Bu sistemlerin amacı, oyunu yasaklamak değil; ebeveynlerin ve kullanıcıların içerik hakkında bilinçli karar vermesini sağlamaktır.</p>
+      <p>Küresel ölçekte en bilinen yaş derecelendirme sistemleri ESRB ve PEGI’dir. ESRB daha çok Amerika merkezli bir sistemdir ve oyunları “Everyone”, “Everyone 10+”, “Teen”, “Mature 17+” ve “Adults Only 18+” gibi kategorilerle sınıflandırır. PEGI ise Avrupa’da yaygın olarak kullanılır ve oyunları 3, 7, 12, 16 ve 18 yaş etiketleriyle değerlendirir. Bu etiketler oyunun zorluk seviyesini değil, içeriğin hangi yaş grubu için uygun olduğunu gösterir. Örneğin bir oyunun PEGI 18 olması, oyunun oynanmasının zor olduğu anlamına değil; şiddet, korku, kötü dil, kumar, cinsellik ya da benzeri içerikler nedeniyle çocuklar için uygun görülmediği anlamına gelir.</p>
+      <p>Dijital mağazalarda bu derecelendirmeler çoğunlukla oyun sayfasında, satın alma ya da indirme ekranında görünür. Google Play’de Türkiye’nin de dahil olduğu Avrupa ve Orta Doğu bölgesinde PEGI derecelendirmeleri kullanılır. App Store ise uygulama ve oyunları kendi yaş kategorileriyle sınıflandırır. Xbox ve Microsoft Store gibi platformlarda geliştiriciler, oyunlarının içerik ve işlevlerine göre yaş derecelendirmesi almak için IARC gibi sistemler üzerinden değerlendirme sürecine girebilir. Steam’de ise bazı bölgelerde yerel derecelendirme zorunlulukları uygulanırken, içerik anketleri ve bölgesel yaş sınıflandırmaları mağaza görünürlüğünü etkileyebilir.</p>
+      <p>Türkiye’de uzun süre dijital oyunlara özel, tüm platformları kapsayan bağımsız ve yaygın bir ulusal yaş derecelendirme sistemi sınırlı düzeydeydi. Ancak 2026’da kabul edilen 7578 sayılı Kanun ile oyun platformlarına yaş derecelendirmesi konusunda yeni yükümlülükler getirilmiştir. Buna göre oyun platformları, usulüne uygun biçimde derecelendirilmemiş oyunları sunamaz; derecelendirme yoksa oyunu en yüksek yaş kriterine göre sınıflandırarak sunabilir. Bu düzenleme, Türkiye’de dijital oyunların çocuklar açısından daha görünür ve denetlenebilir bir yaş sınıflandırmasıyla sunulması yönünde önemli bir adımdır.</p>
+      <p>Ebeveynler için bu sistemlerden yararlanmanın en temel yolu, oyunun yalnızca ismine ya da popülerliğine bakmak yerine yaş etiketini ve içerik açıklamalarını birlikte değerlendirmektir. Bir oyunun yaş sınırı, çocuğun o oyunu kesinlikle oynayıp oynayamayacağına dair tek başına yeterli bir karar aracı değildir; ancak içerik hakkında güçlü bir ilk uyarı sunar. Bu nedenle ebeveynler, oyun seçerken yaş derecelendirmesine, içerik tanımlayıcılarına, çevrim içi etkileşim özelliklerine ve oyun içi satın alma uyarılarına dikkat ederek çocukları için daha bilinçli bir dijital oyun ortamı oluşturabilir.</p>
+    </div>
+  </div>
+
+  <!-- PLATFORM 2 -->
+  <div id="art-platform-2">
+    <div class="art-kicker">Platformlar ve Yaş Sınırlamaları</div>
+    <!-- GÖRSEL 2 (kategori kutusuyla aynı görsel) -->
+    <div class="img-slot art-hero-img"><span class="img-label">Görsel 2 (buraya eklenecek)</span></div>
+    <h2 class="art-title">Oyun Platformlarını Tanımak Neden Önemli?</h2>
+    <div class="art-body">
+      <p>Dijital oyunlara yönelik kaygıların önemli bir bölümü, oyunların oynandığı platformların yeterince tanınmamasından kaynaklanmaktadır. Bir ebeveyn için “çocuğum oyun oynuyor” ifadesi çoğu zaman belirsiz ve endişe verici olabilir. Oysa oyunun hangi platformdan indirildiği, nasıl sunulduğu, yaş etiketinin nerede gösterildiği, çevrim içi özelliklerinin olup olmadığı ve oyun içi satın alma içerip içermediği bilinirse, dijital oyun deneyimi daha anlaşılır ve yönetilebilir hâle gelir. Bu nedenle oyun platformlarını tanımak, önyargıyı azaltmanın ve bilinçli karar vermenin ilk adımlarından biridir.</p>
+      <p>Steam, özellikle bilgisayar oyunculuğunda en yaygın dijital oyun mağazalarından biridir. Kullanıcılar Steam üzerinden oyun satın alabilir, indirebilir, güncelleyebilir ve diğer oyuncularla topluluk alanlarında etkileşime girebilir. Steam’de büyük bütçeli yapımlardan bağımsız oyunlara kadar çok farklı türlerde içerikler bulunur. Bu çeşitlilik, ebeveynlerin her oyunu aynı kategori içinde değerlendirmemesi gerektiğini gösterir. Bir eğitim oyunu, strateji oyunu, spor oyunu ya da yetişkinlere yönelik bir oyun aynı platformda yer alabilir; bu nedenle oyunun platformundan çok içerik bilgisi ve yaş uygunluğu dikkate alınmalıdır.</p>
+      <p>PlayStation, Sony’nin oyun konsolu ekosistemidir. PlayStation Store üzerinden dijital oyunlar satın alınabilir ve indirilebilir. Platformda çocuklara, gençlere ve yetişkinlere yönelik çok farklı oyun türleri yer alır. PlayStation oyunlarında yaş derecelendirmeleri, oyun sayfalarında ve içerik bilgilerinde görülebilir. Bu durum, ebeveynlere oyunun yalnızca popülerliğine değil, hangi yaş grubu için uygun olduğuna bakma imkânı sunar.</p>
+      <p>Nintendo, özellikle aile dostu algısıyla bilinse de Nintendo Switch ve Nintendo eShop üzerinde her yaş grubuna yönelik oyunlar bulunur. Mario, Zelda veya Pokémon gibi geniş kitlelere hitap eden oyunların yanında, daha büyük yaş gruplarına yönelik içerikler de yer alabilir. Bu nedenle Nintendo platformlarının genel olarak “çocuklara uygundur” şeklinde değerlendirilmesi yeterli değildir. Her oyunun kendi yaş etiketi ve içerik açıklaması ayrıca incelenmelidir.</p>
+      <p>Xbox, Microsoft’un oyun ekosistemidir ve konsol, bilgisayar ve bulut oyun hizmetleriyle birlikte çalışır. Xbox Store ve Game Pass gibi hizmetler sayesinde kullanıcılar çok sayıda oyuna erişebilir. Bu erişim kolaylığı, oyun seçimini daha önemli hâle getirir. Çünkü çocuklar tek tek oyun satın almak yerine abonelik sistemi içindeki birçok oyuna ulaşabilir. Bu nedenle Xbox gibi platformlarda yaş derecelendirmeleri, içerik etiketleri ve oyun açıklamaları ebeveynler için temel bilgi kaynaklarıdır.</p>
+      <p>Google Play ve App Store ise mobil oyunların en yaygın dağıtım alanlarıdır. Çocukların telefon ve tablet üzerinden eriştiği birçok oyun bu mağazalarda yer alır. Mobil oyunlarda ücretsiz indirme, reklamlar, oyun içi satın alma ve çevrim içi etkileşim gibi unsurlar daha sık görülebilir. Bu nedenle mobil oyunlarda yalnızca yaş etiketine değil; uygulama açıklamalarına, veri kullanımı bilgilerine, reklam ve satın alma uyarılarına da dikkat edilmelidir. Google Play’de içerik derecelendirmeleri bölgelere göre ESRB, PEGI veya benzeri sistemlerle ilişkilendirilirken, App Store kendi yaş kategorileri üzerinden oyun ve uygulamaları sınıflandırır.</p>
+      <p>Bu platformları tanımak, dijital oyunlara yönelik kaygıları tamamen ortadan kaldırmaz; ancak bu kaygıların daha bilinçli biçimde yönetilmesini sağlar. Ebeveynler oyunun hangi platformda yer aldığını, yaş etiketinin ne anlama geldiğini ve içerik açıklamalarının nasıl okunacağını bildiğinde, “oyun zararlıdır” gibi genel yargılar yerine daha sağlıklı sorular sorabilir: Bu oyun hangi yaş grubu için uygun? Çevrim içi iletişim içeriyor mu? Oyun içi satın alma var mı? Şiddet, korku veya kumar benzeri unsurlar barındırıyor mu?</p>
+      <p>Bu nedenle oyun platformlarını tanımak, dijital oyunları yasaklama ya da koşulsuz kabul etme arasında sıkışmadan, çocuklar için daha güvenli ve bilinçli bir medya ortamı oluşturmanın temel adımlarından biridir.</p>
+    </div>
+  </div>
+
+  <!-- PLATFORM 3 -->
+  <div id="art-platform-3">
+    <div class="art-kicker">Platformlar ve Yaş Sınırlamaları</div>
+    <!-- GÖRSEL 3 (kategori kutusuyla aynı görsel) -->
+    <div class="img-slot art-hero-img"><span class="img-label">Görsel 3 (buraya eklenecek)</span></div>
+    <h2 class="art-title">Çocuk Koruma Sistemleri Nasıl Kullanılır?</h2>
+    <div class="art-body">
+      <p>Dijital oyun platformlarında çocukları korumaya yönelik sistemler, yalnızca teknik ayarlardan ibaret değildir. Bu sistemler; çocuğun yaşına uygun olmayan oyunlara erişimini sınırlandırmak, oyun süresini düzenlemek, çevrim içi iletişimi kontrol etmek ve izinsiz harcamaların önüne geçmek için geliştirilmiştir. Ebeveynler bu araçları kullanarak dijital oyunları tamamen yasaklamak yerine, çocukları için daha güvenli ve yaşa uygun bir oyun ortamı oluşturabilir.</p>
+      <h3>Steam</h3>
+      <p>Steam’de çocuk koruma sistemi güncel olarak Steam Families üzerinden yönetilir. Bir ebeveyn, kendi Steam hesabı üzerinden aile grubu oluşturabilir ve çocuğun hesabını bu aileye ekleyebilir. Daha sonra Account Settings &gt; Family Management &gt; Manage bölümünden çocuğun hesabı seçilerek ebeveyn kontrolleri etkinleştirilebilir.</p>
+      <p>Steam Families içinde ebeveynler çocuğun hangi oyunlara erişebileceğini belirleyebilir, mağaza ve topluluk özelliklerini sınırlandırabilir ve oyun süresi için günlük ya da haftalık limitler koyabilir. Bu sistem özellikle bilgisayar üzerinden oyun oynayan çocuklar için önemlidir; çünkü Steam’de her yaş grubuna uygun oyunlar olduğu gibi, yetişkinlere yönelik içerikler de bulunabilir. Bu nedenle ebeveynlerin yalnızca platforma değil, çocuğun erişebildiği oyun listesine de dikkat etmesi gerekir.</p>
+      <h3>PlayStation</h3>
+      <p>PlayStation’da çocuk koruma ayarları Family Management sistemi ve PlayStation Family App üzerinden yapılabilir. Ebeveyn, önce aile yöneticisi olarak bir aile hesabı oluşturur ve çocuğu bu aileye çocuk hesabı olarak ekler. PS5 üzerinde bu ayarlara Settings &gt; Family and Parental Controls &gt; Family Management yoluyla ulaşılabilir. Mobil uygulamada ise çocuk hesabı seçilerek ebeveyn kontrolü ayarları düzenlenebilir.</p>
+      <p>PlayStation’da ebeveynler oyun ve uygulamalar için yaş seviyesi belirleyebilir, çocuğun kısıtlı oyunlara erişim isteğini onaylayabilir ya da reddedebilir. Ayrıca çevrim içi iletişim, kullanıcıların oluşturduğu içerikler, web tarayıcısı kullanımı, oyun süresi ve PlayStation Store harcamaları sınırlandırılabilir. Bu sistem, özellikle çevrim içi çok oyunculu oyunlarda çocuğun kimlerle iletişim kurabileceğini kontrol etmek açısından önemlidir.</p>
+      <h3>Nintendo</h3>
+      <p>Nintendo Switch ve Nintendo Switch 2 için çocuk koruma ayarları en kapsamlı şekilde Nintendo Switch Parental Controls mobil uygulamasıyla yönetilir. Ebeveyn, uygulamayı telefonuna indirir, kendi Nintendo hesabıyla giriş yapar ve konsolu uygulamaya bağlar. Bağlantı tamamlandıktan sonra uygulama üzerinden oyun süresi, yatma saati, yazılım kısıtlamaları ve bazı iletişim özellikleri düzenlenebilir.</p>
+      <p>Nintendo sisteminde günlük oyun süresi belirlenebilir; ayrıca belirli bir saatten sonra konsol kullanımının durması için yatma saati ayarlanabilir. Ebeveyn isterse süre dolduğunda yalnızca uyarı verilmesini, isterse oyunun otomatik olarak durdurulmasını seçebilir. Yaş kısıtlamaları ise “Child”, “Pre-Teen”, “Teen” gibi hazır seviyelerle ya da özel ayarlarla düzenlenebilir. Nintendo’da önemli bir nokta, ebeveyn kontrollerinin çoğunlukla konsol genelinde uygulanmasıdır. Yani aynı konsolu birden fazla çocuk kullanıyorsa ayarların en küçük çocuğa göre yapılması daha güvenli olur.</p>
+      <h3>Xbox</h3>
+      <p>Xbox’ta çocuk koruma ayarları Xbox Family Settings uygulaması ve Microsoft aile grubu üzerinden yönetilir. Ebeveyn, Microsoft hesabıyla bir aile grubu oluşturur ve çocuğun hesabını bu gruba ekler. Ardından Xbox Family Settings uygulaması üzerinden çocuğun oyun etkinliği, ekran süresi, içerik kısıtlamaları, harcama izinleri ve çevrim içi iletişim ayarları düzenlenebilir.</p>
+      <p>Xbox’ta ebeveynler çocuğun yaşına uygun olmayan oyun ve uygulamaları filtreleyebilir. Ayrıca her gün için farklı oyun süresi belirlenebilir ve gerektiğinde ekran süresi geçici olarak duraklatılabilir. “Ask to Buy” özelliği sayesinde çocuk bir oyun, uygulama ya da oyun içi içerik satın almak istediğinde ebeveyne onay isteği gönderilir. Arkadaş ekleme, çok oyunculu oyunlara katılma ve çevrim içi iletişim gibi özellikler de aile ayarları içinden kontrol edilebilir. Bu özellikler özellikle Game Pass gibi çok sayıda oyuna erişim sağlayan abonelik sistemlerinde daha da önemli hâle gelir.</p>
+      <h3>Google Play</h3>
+      <p>Android telefon ve tabletlerde oyun erişimi çoğunlukla Google Play üzerinden gerçekleşir. Google Play’de ebeveyn kontrolleri doğrudan mağaza ayarlarından ya da Google Family Link uygulaması üzerinden açılabilir. Google Play uygulamasında ebeveyn kontrolleri için profil simgesinden Settings &gt; Family &gt; Parental Controls bölümüne girilir, kontrol sistemi etkinleştirilir ve çocuğun bilmediği bir PIN oluşturulur.</p>
+      <p>Family Link kullanan ailelerde ise ebeveyn, Family Link uygulamasından çocuğun hesabını seçerek Controls &gt; Google Play bölümüne girebilir. Burada oyun ve uygulamalar için yaşa uygun içerik filtresi belirlenebilir. Ayrıca çocuğun yeni uygulama indirmesi, oyun içi satın alma yapması ya da belirli uygulamaları kullanması ebeveyn onayına bağlanabilir. Family Link üzerinden ekran süresi, günlük limitler, uyku zamanı ve uygulama bazlı kullanım sınırları da ayarlanabilir.</p>
+      <h3>App Store</h3>
+      <p>iPhone ve iPad kullanan çocuklar için oyun erişimi çoğunlukla App Store üzerinden gerçekleşir. Apple cihazlarda çocuk koruma ayarları Screen Time ve Family Sharing sistemiyle yönetilir. Ebeveyn, çocuğu aile paylaşımına ekledikten sonra kendi cihazından çocuğun hesabını seçerek ekran süresi ve içerik kısıtlamalarını düzenleyebilir.</p>
+      <p>Bu ayarlar için Settings &gt; Screen Time &gt; Family bölümünden çocuğun adı seçilir ve Content &amp; Privacy Restrictions etkinleştirilir. Buradan uygulama yükleme, uygulama silme, oyun içi satın alma ve yaşa uygun olmayan içeriklere erişim sınırlandırılabilir. App Store, Media, Web &amp; Games bölümünden uygulama yaş derecelendirmeleri, web içeriği ve Game Center özellikleri kontrol edilebilir. Game Center ayarları sayesinde çok oyunculu oyunlar, arkadaş ekleme, özel mesajlaşma ve ekran kaydı gibi özellikler sınırlandırılabilir.</p>
+      <p>Apple ekosisteminde Ask to Buy özelliği de önemlidir. Bu özellik açık olduğunda çocuk bir oyun ya da uygulama indirmek veya satın almak istediğinde ebeveyne onay isteği gider. Ebeveyn bu isteği kendi iPhone, iPad, Mac veya Apple Watch cihazından onaylayabilir ya da reddedebilir. Böylece çocukların yaşına uygun olmayan oyunları indirmesi veya izinsiz harcama yapması daha kontrollü hâle gelir.</p>
+      <h3>Bilinçli Kullanım Neden Önemli?</h3>
+      <p>Çocuk koruma sistemleri tek başına bütün riskleri ortadan kaldırmaz; ancak ebeveynlere güçlü bir rehberlik alanı sunar. Bu araçlar doğru kullanıldığında çocukların yaşına uygun içeriklere yönelmesine, oyun süresinin dengelenmesine, çevrim içi iletişimin daha güvenli hâle gelmesine ve oyun içi harcamaların kontrol altında tutulmasına yardımcı olur.</p>
+      <p>Bu nedenle ebeveynlerin dijital oyunları yalnızca “zararlı” ya da “zararsız” şeklinde değerlendirmesi yerine, platformların sunduğu koruma sistemlerini tanıması önemlidir. Yaş derecelendirmelerini okumak, ebeveyn kontrollerini açmak, oyun süresini düzenlemek ve çocukla oyun deneyimi üzerine konuşmak; dijital oyunları daha bilinçli, güvenli ve yönetilebilir bir medya deneyimine dönüştürür.</p>
+    </div>
+  </div>
+
+  <!-- SSS -->
+  <div id="art-sss">
+    <div class="art-kicker">Sıkça Sorulan Sorular</div>
+    <!-- GÖRSEL 4 (kategori kutusuyla aynı görsel) -->
+    <div class="img-slot art-hero-img"><span class="img-label">Görsel 4 (buraya eklenecek)</span></div>
+    <h2 class="art-title">Sıkça Sorulan Sorular</h2>
+    <p class="faq-intro">Sorulara tıklayarak yanıtlarını açabilirsiniz.</p>
+    <div id="faqList"></div>
+  </div>
+
+  <!-- HAKKIMIZDA -->
+  <div id="art-hakkimizda">
+    <div class="art-kicker">Hakkımızda</div>
+    <h2 class="art-title">Hakkımızda</h2>
+    <div class="about-amac">
+      <h3>Proje Amacı</h3>
+      <p>Bu proje, dijital oyunlara yönelik toplumsal önyargıları araştırma verileriyle ele almayı ve özellikle ebeveynlerin oyunlara daha bilinçli yaklaşmasını sağlamayı amaçlamaktadır. Dijital oyunları yalnızca risk ya da eğlence unsuru olarak değil; yaş uygunluğu, içerik, kullanım süresi ve aile rehberliği çerçevesinde değerlendiren dengeli bir bakış açısı sunar.</p>
+    </div>
+    <h3 class="about-team-title">Projenin Üyeleri ve Görevleri</h3>
+    <div class="member"><div class="avatar">EG</div><div><div class="m-name">Emre Güneş</div><div class="m-role">Web Sitesi Moderatörü ve İçerik Editörü</div></div></div>
+    <div class="member"><div class="avatar">BK</div><div><div class="m-name">Berkay Kuru</div><div class="m-role">İçerik Editörü</div></div></div>
+    <div class="member"><div class="avatar">SK</div><div><div class="m-name">Sena Kam</div><div class="m-role">İçerik Editörü</div></div></div>
+  </div>
+
+  <!-- KAYNAKÇA -->
+  <div id="art-kaynakca">
+    <div class="art-kicker">Kaynakça</div>
+    <h2 class="art-title">Kaynakça</h2>
+
+    <div class="kaynak-group">
+      <h3>Akademik Araştırmalar ve Raporlar</h3><div class="grp-line"></div>
+      <div class="kaynak-item"><div class="k-src">World Health Organization. “Gaming Disorder.”</div><a href="https://www.who.int/standards/classifications/frequently-asked-questions/gaming-disorder" target="_blank" rel="noopener">https://www.who.int/standards/classifications/frequently-asked-questions/gaming-disorder</a></div>
+      <div class="kaynak-item"><div class="k-src">Chaarani, B. ve diğerleri. “Association of Video Gaming With Cognitive Performance Among Children.” JAMA Network Open, 2022.</div><a href="https://jamanetwork.com/journals/jamanetworkopen/fullarticle/2797596" target="_blank" rel="noopener">https://jamanetwork.com/journals/jamanetworkopen/fullarticle/2797596</a></div>
+      <div class="kaynak-item"><div class="k-src">National Institutes of Health. “Video gaming may be associated with better cognitive performance in children.” 2022.</div><a href="https://www.nih.gov/news-events/news-releases/video-gaming-may-be-associated-better-cognitive-performance-children" target="_blank" rel="noopener">https://www.nih.gov/news-events/news-releases/video-gaming-may-be-associated-better-cognitive-performance-children</a></div>
+      <div class="kaynak-item"><div class="k-src">Kovess-Masfety, V. ve diğerleri. “Is time spent playing video games associated with mental health, cognitive and social skills in young children?” Social Psychiatry and Psychiatric Epidemiology, 2016.</div><a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC4814321/" target="_blank" rel="noopener">https://pmc.ncbi.nlm.nih.gov/articles/PMC4814321/</a></div>
+      <div class="kaynak-item"><div class="k-src">Alotaibi, M. S. “Game-based learning in early childhood education: a systematic review and meta-analysis.” Frontiers in Psychology, 2024.</div><a href="https://www.frontiersin.org/journals/psychology/articles/10.3389/fpsyg.2024.1307881/full" target="_blank" rel="noopener">https://www.frontiersin.org/journals/psychology/articles/10.3389/fpsyg.2024.1307881/full</a></div>
+      <div class="kaynak-item"><div class="k-src">Ferguson, C. J. “Do Angry Birds Make for Angry Children? A Meta-Analysis of Video Game Influences on Children’s and Adolescents’ Aggression, Mental Health, Prosocial Behavior, and Academic Performance.” Perspectives on Psychological Science, 2015.</div><a href="https://pubmed.ncbi.nlm.nih.gov/26386002/" target="_blank" rel="noopener">https://pubmed.ncbi.nlm.nih.gov/26386002/</a></div>
+      <div class="kaynak-item"><div class="k-src">American Psychological Association. “APA reaffirms position on violent video games and violent behavior.” 2020.</div><a href="https://www.apa.org/news/press/releases/2020/03/violent-video-games-behavior" target="_blank" rel="noopener">https://www.apa.org/news/press/releases/2020/03/violent-video-games-behavior</a></div>
+      <div class="kaynak-item"><div class="k-src">Prescott, A. T., Sargent, J. D. ve Hull, J. G. “Metaanalysis of the relationship between violent video game play and physical aggression over time.” Proceedings of the National Academy of Sciences, 2018.</div><a href="https://www.pnas.org/doi/10.1073/pnas.1611617114" target="_blank" rel="noopener">https://www.pnas.org/doi/10.1073/pnas.1611617114</a></div>
+      <div class="kaynak-item"><div class="k-src">Przybylski, A. K. ve Weinstein, N. “Violent video game engagement is not associated with adolescents’ aggressive behaviour.” Royal Society Open Science, 2019.</div><a href="https://royalsocietypublishing.org/doi/10.1098/rsos.171474" target="_blank" rel="noopener">https://royalsocietypublishing.org/doi/10.1098/rsos.171474</a></div>
+      <div class="kaynak-item"><div class="k-src">Kristensen, J. H. ve diğerleri. “Problematic Gaming and Sleep: A Systematic Review and Meta-Analysis.” Frontiers in Psychiatry, 2021.</div><a href="https://www.frontiersin.org/journals/psychiatry/articles/10.3389/fpsyt.2021.675237/full" target="_blank" rel="noopener">https://www.frontiersin.org/journals/psychiatry/articles/10.3389/fpsyt.2021.675237/full</a></div>
+      <div class="kaynak-item"><div class="k-src">Satapathy, P. ve diğerleri. “Burden of gaming disorder among adolescents: A systematic review and meta-analysis.” Public Health in Practice, 2024/2025.</div><a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC11925544/" target="_blank" rel="noopener">https://pmc.ncbi.nlm.nih.gov/articles/PMC11925544/</a></div>
+      <div class="kaynak-item"><div class="k-src">Vasconcellos, R. P. ve diğerleri. “Electronic Screen Use and Children’s Socioemotional Problems: A Systematic Review and Meta-Analysis of Longitudinal Studies.” Psychological Bulletin, 2025.</div><a href="https://pubmed.ncbi.nlm.nih.gov/40489178/" target="_blank" rel="noopener">https://pubmed.ncbi.nlm.nih.gov/40489178/</a></div>
+      <div class="kaynak-item"><div class="k-src">Uzun, E. M. ve diğerleri. “Ebeveynlerin Gözünden Çocuklarının Dijital Oyun Oynama Alışkanlıklarının Değerlendirilmesi.” Atatürk Üniversitesi Kazım Karabekir Eğitim Fakültesi Dergisi, 2023.</div><a href="https://dergipark.org.tr/tr/pub/erziefd/article/1111846" target="_blank" rel="noopener">https://dergipark.org.tr/tr/pub/erziefd/article/1111846</a></div>
+      <div class="kaynak-item"><div class="k-src">Fidan, A. ve diğerleri. “Investigating the Digital Parenting Behaviors of Parents on Children’s Digital Game Play.” Çukurova Üniversitesi Eğitim Fakültesi Dergisi.</div><a href="https://dergipark.org.tr/en/pub/cuefd/issue/65577/933215" target="_blank" rel="noopener">https://dergipark.org.tr/en/pub/cuefd/issue/65577/933215</a></div>
+      <div class="kaynak-item"><div class="k-src">Tuncay, B. ve Göger, S. “Ergenlerde Dijital Oyun Bağımlılığı ve Uyku Kalitesi İlişkisinin İncelenmesi.” Journal of Turkish Sleep Medicine, 2022.</div><a href="https://jtsm.org/pdf/477dd3ac-0088-448a-a453-fd2929e03f96/articles/jtsm.galenos.2021.52207/JTSM-9-79-En.pdf" target="_blank" rel="noopener">https://jtsm.org/pdf/477dd3ac-0088-448a-a453-fd2929e03f96/articles/jtsm.galenos.2021.52207/JTSM-9-79-En.pdf</a></div>
+      <div class="kaynak-item"><div class="k-src">Aksoy, Z. ve diğerleri. “Digital Game Addiction and Lifestyle Behaviors in Turkish Adolescents.” Clinical and Experimental Health Sciences.</div><a href="https://dergipark.org.tr/en/pub/clinexphealthsci/article/885988" target="_blank" rel="noopener">https://dergipark.org.tr/en/pub/clinexphealthsci/article/885988</a></div>
+      <div class="kaynak-item"><div class="k-src">Boz, C. ve diğerleri. “Examination of game addiction studies conducted in Turkey.” Frontiers in Psychiatry, 2023.</div><a href="https://www.frontiersin.org/journals/psychiatry/articles/10.3389/fpsyt.2023.1014621/full" target="_blank" rel="noopener">https://www.frontiersin.org/journals/psychiatry/articles/10.3389/fpsyt.2023.1014621/full</a></div>
+    </div>
+
+    <div class="kaynak-group">
+      <h3>Yaş Derecelendirme Sistemleri ve Oyun Platformları</h3><div class="grp-line"></div>
+      <div class="kaynak-item"><div class="k-src">ESRB. “Ratings Guide.”</div><a href="https://www.esrb.org/ratings-guide/" target="_blank" rel="noopener">https://www.esrb.org/ratings-guide/</a></div>
+      <div class="kaynak-item"><div class="k-src">ESRB. “Video Game Ratings and Parental Tools.”</div><a href="https://www.esrb.org/" target="_blank" rel="noopener">https://www.esrb.org/</a></div>
+      <div class="kaynak-item"><div class="k-src">PEGI. “Pan European Game Information.”</div><a href="https://pegi.info/" target="_blank" rel="noopener">https://pegi.info/</a></div>
+      <div class="kaynak-item"><div class="k-src">PEGI. “Search PEGI Ratings.”</div><a href="https://pegi.info/search-pegi" target="_blank" rel="noopener">https://pegi.info/search-pegi</a></div>
+      <div class="kaynak-item"><div class="k-src">Google Play Help. “Apps &amp; Games content ratings on Google Play.”</div><a href="https://support.google.com/googleplay/answer/6209544" target="_blank" rel="noopener">https://support.google.com/googleplay/answer/6209544</a></div>
+      <div class="kaynak-item"><div class="k-src">IARC. “International Age Rating Coalition.”</div><a href="https://globalratings.com/" target="_blank" rel="noopener">https://globalratings.com/</a></div>
+      <div class="kaynak-item"><div class="k-src">Steam Support. “Steam Families User Guide &amp; FAQ.”</div><a href="https://help.steampowered.com/en/faqs/view/054C-3167-DD7F-49D4" target="_blank" rel="noopener">https://help.steampowered.com/en/faqs/view/054C-3167-DD7F-49D4</a></div>
+      <div class="kaynak-item"><div class="k-src">PlayStation Support. “How to set parental controls on PlayStation consoles.”</div><a href="https://www.playstation.com/en-us/support/account/ps5-parental-controls-spending-limits/" target="_blank" rel="noopener">https://www.playstation.com/en-us/support/account/ps5-parental-controls-spending-limits/</a></div>
+      <div class="kaynak-item"><div class="k-src">PlayStation. “PlayStation Family App.”</div><a href="https://www.playstation.com/en-us/ps-family-app/" target="_blank" rel="noopener">https://www.playstation.com/en-us/ps-family-app/</a></div>
+      <div class="kaynak-item"><div class="k-src">Nintendo. “Nintendo Switch Parental Controls App.”</div><a href="https://www.nintendo.com/us/mobile-apps/parental-controls/" target="_blank" rel="noopener">https://www.nintendo.com/us/mobile-apps/parental-controls/</a></div>
+      <div class="kaynak-item"><div class="k-src">Xbox. “Xbox Family Settings App.”</div><a href="https://www.xbox.com/en-US/apps/family-settings-app" target="_blank" rel="noopener">https://www.xbox.com/en-US/apps/family-settings-app</a></div>
+      <div class="kaynak-item"><div class="k-src">Microsoft Support. “Set screen time limits across devices.”</div><a href="https://support.microsoft.com/en-us/family-safety/set-screen-time-limits-across-devices" target="_blank" rel="noopener">https://support.microsoft.com/en-us/family-safety/set-screen-time-limits-across-devices</a></div>
+      <div class="kaynak-item"><div class="k-src">Google Play Help. “How to set up parental controls on Google Play.”</div><a href="https://support.google.com/googleplay/answer/1075738" target="_blank" rel="noopener">https://support.google.com/googleplay/answer/1075738</a></div>
+      <div class="kaynak-item"><div class="k-src">Google Family Link.</div><a href="https://families.google/familylink/" target="_blank" rel="noopener">https://families.google/familylink/</a></div>
+      <div class="kaynak-item"><div class="k-src">Apple Support. “Use parental controls to manage your child’s iPhone or iPad.”</div><a href="https://support.apple.com/en-us/105121" target="_blank" rel="noopener">https://support.apple.com/en-us/105121</a></div>
+      <div class="kaynak-item"><div class="k-src">Apple Support. “Change settings and restrictions in the App Store on iPhone.”</div><a href="https://support.apple.com/guide/iphone/change-settings-and-restrictions-iph3dfd91de/ios" target="_blank" rel="noopener">https://support.apple.com/guide/iphone/change-settings-and-restrictions-iph3dfd91de/ios</a></div>
+      <div class="kaynak-item"><div class="k-src">Türkiye’de oyun platformlarına yönelik yaş derecelendirme yükümlülüğü hakkında 7578 sayılı Kanun değerlendirmesi.</div><a href="https://gun.av.tr/tr/goruslerimiz/guncel-yazilar/5651-sayili-internet-kanunu-nda-sosyal-medya-ve-oyun-platformlarina-yonelik-degisiklikler" target="_blank" rel="noopener">https://gun.av.tr/tr/goruslerimiz/guncel-yazilar/5651-sayili-internet-kanunu-nda-sosyal-medya-ve-oyun-platformlarina-yonelik-degisiklikler</a></div>
+    </div>
+
+    <div class="kaynak-group">
+      <h3>Ebeveyn Bilgilendirme, Dijital Güvenlik ve Destek Kaynakları</h3><div class="grp-line"></div>
+      <div class="kaynak-item"><div class="k-src">Common Sense Media. “Game Reviews.”</div><a href="https://www.commonsensemedia.org/game-reviews" target="_blank" rel="noopener">https://www.commonsensemedia.org/game-reviews</a></div>
+      <div class="kaynak-item"><div class="k-src">Common Sense Media. “Age-Based Media Reviews for Families.”</div><a href="https://www.commonsensemedia.org/" target="_blank" rel="noopener">https://www.commonsensemedia.org/</a></div>
+      <div class="kaynak-item"><div class="k-src">American Academy of Pediatrics. “Family Media Plan.”</div><a href="https://www.healthychildren.org/English/fmp/Pages/MediaPlan.aspx" target="_blank" rel="noopener">https://www.healthychildren.org/English/fmp/Pages/MediaPlan.aspx</a></div>
+      <div class="kaynak-item"><div class="k-src">American Academy of Pediatrics. “How to Make a Family Media Use Plan.”</div><a href="https://www.healthychildren.org/English/family-life/Media/Pages/How-to-Make-a-Family-Media-Use-Plan.aspx" target="_blank" rel="noopener">https://www.healthychildren.org/English/family-life/Media/Pages/How-to-Make-a-Family-Media-Use-Plan.aspx</a></div>
+      <div class="kaynak-item"><div class="k-src">UNICEF. “Digital Parenting.”</div><a href="https://www.unicef.org/parenting/digital-parenting" target="_blank" rel="noopener">https://www.unicef.org/parenting/digital-parenting</a></div>
+      <div class="kaynak-item"><div class="k-src">UNICEF. “How to keep your child safe online.”</div><a href="https://www.unicef.org/parenting/child-care/keep-your-child-safe-online" target="_blank" rel="noopener">https://www.unicef.org/parenting/child-care/keep-your-child-safe-online</a></div>
+      <div class="kaynak-item"><div class="k-src">YEDAM – Yeşilay Danışmanlık Merkezi.</div><a href="https://www.yedam.org.tr/" target="_blank" rel="noopener">https://www.yedam.org.tr/</a></div>
+      <div class="kaynak-item"><div class="k-src">Güvenli Web – BTK.</div><a href="https://www.guvenliweb.org.tr/" target="_blank" rel="noopener">https://www.guvenliweb.org.tr/</a></div>
+      <div class="kaynak-item"><div class="k-src">BTK. “İnternet Kullanımında Çocuk ve Aile İlişkisi.”</div><a href="https://internet.btk.gov.tr/internet-kullaniminda-cocuk-ve-aile-iliskisi" target="_blank" rel="noopener">https://internet.btk.gov.tr/internet-kullaniminda-cocuk-ve-aile-iliskisi</a></div>
+      <div class="kaynak-item"><div class="k-src">MHRS – Merkezi Hekim Randevu Sistemi.</div><a href="https://www.mhrs.gov.tr/" target="_blank" rel="noopener">https://www.mhrs.gov.tr/</a></div>
+      <div class="kaynak-item"><div class="k-src">e-Devlet. “Sağlık Bakanlığı Merkezi Hekim Randevu Sistemi.”</div><a href="https://www.turkiye.gov.tr/saglik-bakanligi-merkezi-hekim-randevu-sistemi" target="_blank" rel="noopener">https://www.turkiye.gov.tr/saglik-bakanligi-merkezi-hekim-randevu-sistemi</a></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- SSS veri (JS doldurur) -->
+<script>
+/* ====== SSS SORU-CEVAPLARI ====== */
+const FAQ = [
+  ["Dijital oyunlar çocuklar için tamamen zararlı mıdır?","Hayır. Dijital oyunlar tek başına “zararlı” ya da “faydalı” olarak değerlendirilemez. Oyunun içeriği, çocuğun yaşı, oyun süresi, çevrim içi etkileşim durumu ve aile rehberliği birlikte değerlendirilmelidir. Araştırmalar, bazı oyunların dikkat, problem çözme ve karar verme gibi becerilerle ilişkilendirilebildiğini; ancak kontrolsüz kullanımın uyku, sosyal yaşam ve psikolojik iyi oluş üzerinde riskler oluşturabileceğini göstermektedir."],
+  ["Çocuğumun oynadığı oyunun yaşına uygun olup olmadığını nasıl anlayabilirim?","Oyunun yaş derecelendirmesine ve içerik açıklamalarına bakılmalıdır. PEGI, ESRB, App Store yaş etiketleri veya Google Play içerik derecelendirmeleri bu konuda yol göstericidir. Yaş etiketi oyunun zorluk seviyesini değil, içerik uygunluğunu gösterir. Örneğin bir oyunun 18+ olması, oyunun çocuklar için uygun olmayan şiddet, korku, kötü dil, kumar ya da benzeri unsurlar içerebileceği anlamına gelir."],
+  ["Oyun oynama süresi ne kadar olmalıdır?","Her çocuk için tek bir ideal süre söylemek doğru değildir. Önemli olan oyun süresinin çocuğun uyku düzenini, okul sorumluluklarını, sosyal ilişkilerini, fiziksel aktivitesini ve aile içi iletişimini olumsuz etkilememesidir. Ebeveynler çocukla birlikte makul süre sınırları belirlemeli ve bu sınırların neden gerekli olduğunu açıklamalıdır."],
+  ["Oyun bağımlılığı ile çok oyun oynamak aynı şey midir?","Hayır. Bir çocuğun oyun oynamayı sevmesi veya bazı dönemlerde daha fazla oyun oynaması doğrudan bağımlılık anlamına gelmez. Oyun bağımlılığı ya da oyun oynama bozukluğu; kontrol kaybı, oyunun diğer yaşam alanlarının önüne geçmesi ve olumsuz sonuçlara rağmen oyun davranışının sürmesi gibi belirtilerle değerlendirilir. Eğer oyun, çocuğun okulunu, uykusunu, sosyal ilişkilerini ve ruh hâlini belirgin biçimde etkiliyorsa profesyonel destek alınmalıdır."],
+  ["Şiddet içerikli oyunlar çocukları saldırgan yapar mı?","Bu konuda araştırmalar tek bir sonuca işaret etmemektedir. Bazı çalışmalar şiddet içerikli oyunlarla saldırgan davranışlar arasında küçük ilişkiler bulurken, bazı çalışmalar bu ilişkinin her çocuk için genellenemeyeceğini göstermektedir. Bu nedenle oyunun içeriği, çocuğun yaşı, karakter özellikleri, aile ortamı ve oyun süresi birlikte değerlendirilmelidir. Ebeveynler, özellikle küçük yaş gruplarında şiddet içerikli oyunlardan kaçınmalı ve yaş derecelendirmelerine dikkat etmelidir."],
+  ["Mobil oyunlar da riskli olabilir mi?","Evet. Mobil oyunlar çoğu zaman kolay erişilebilir olduğu için ebeveynler tarafından daha masum görülebilir. Ancak bazı mobil oyunlarda reklamlar, oyun içi satın almalar, çevrim içi sohbet özellikleri ve bağımlılık yaratabilecek ödül sistemleri bulunabilir. Bu nedenle Google Play ve App Store’daki yaş etiketleri, kullanıcı yorumları, satın alma uyarıları ve gizlilik bilgileri mutlaka incelenmelidir."],
+  ["Çocuğumun oynadığı oyun hakkında nereden bilgi alabilirim?","Ebeveynler oyunlar hakkında bilgi almak için Common Sense Media, ESRB ve PEGI gibi kaynaklardan yararlanabilir. Bu sitelerde oyunların yaş önerileri, içerik uyarıları, şiddet, dil, korku, çevrim içi etkileşim ve oyun içi satın alma gibi özellikleri hakkında bilgiler bulunabilir. Ayrıca oyunun resmi mağaza sayfası da yaş etiketi ve içerik açıklamaları açısından kontrol edilmelidir."],
+  ["Çocuğumla birlikte oyun oynamak faydalı olur mu?","Evet. Çocukla birlikte oyun oynamak, ebeveynin oyunu daha iyi tanımasını ve çocukla daha sağlıklı iletişim kurmasını sağlayabilir. Bu yaklaşım, oyunu aile içinde çatışma konusu olmaktan çıkarıp ortak bir deneyime dönüştürebilir. Ebeveyn çocuğa “Bu oyunda ne yapıyorsun?” veya “Bana bu oyunu anlatır mısın?” gibi sorular sorarak hem oyunu anlayabilir hem de çocuğun dijital dünyasına daha bilinçli biçimde eşlik edebilir."],
+  ["Her popüler oyun çocuklar için uygun mudur?","Hayır. Bir oyunun popüler olması, o oyunun her yaş grubu için uygun olduğu anlamına gelmez. Bazı popüler oyunlar çevrim içi sohbet, rekabet, şiddet, oyun içi satın alma veya yaşa uygun olmayan içerikler barındırabilir. Bu nedenle ebeveynler oyunun popülerliğine değil, yaş derecelendirmesine ve içerik açıklamalarına dikkat etmelidir."],
+  ["Ebeveyn kontrol sistemleri yeterli midir?","Ebeveyn kontrol sistemleri önemli bir destek sağlar; ancak tek başına yeterli değildir. Oyun süresi, yaş kısıtlaması, satın alma onayı ve çevrim içi iletişim sınırları teknik olarak düzenlenebilir. Fakat en etkili koruma, bu teknik ayarların aile içi iletişimle birlikte kullanılmasıdır. Çocuk, dijital ortamda karşılaştığı bir sorun olduğunda ailesiyle konuşabileceğini bilmelidir."],
+  ["Çocuğum oyun oynamak dışında sosyal medyada da çok zaman geçiriyorsa ne yapmalıyım?","Bu durum yalnızca oyunlarla değil, genel dijital medya kullanımıyla birlikte ele alınmalıdır. Sosyal medya, kısa video platformları, mesajlaşma uygulamaları ve çevrim içi oyunlar çocuğun psikolojik iyi oluşunu birlikte etkileyebilir. Ebeveynler çocuğun toplam ekran kullanımını, maruz kaldığı içerikleri, uyku düzenini ve ruh hâlini gözlemlemelidir."],
+  ["Hangi durumlarda profesyonel destek alınmalıdır?","Çocukta uzun süreli uyku bozukluğu, okul başarısında belirgin düşüş, sosyal ilişkilerden uzaklaşma, sürekli sinirlilik, yoğun kaygı, mutsuzluk, ekran başından ayrılamama veya oyun engellendiğinde aşırı tepki verme gibi belirtiler görülüyorsa profesyonel destek alınmalıdır. Ebeveynler okul rehberlik servisine, çocuk ve ergen psikiyatristlerine, psikologlara veya ilgili danışmanlık merkezlerine başvurabilir."],
+  ["Dijital oyunları tamamen yasaklamak doğru bir çözüm müdür?","Tamamen yasaklamak çoğu zaman kalıcı ve sağlıklı bir çözüm üretmez. Daha doğru yaklaşım, çocuğun yaşına uygun oyunları seçmek, oyun süresini düzenlemek, içerikleri tanımak ve çocukla açık iletişim kurmaktır. Dijital oyunlara karşı en etkili yaklaşım yasaklamak değil; bilinçli rehberlik sağlamaktır."]
+];
+
+/* ====== ELEMANLAR ====== */
+const fullpage   = document.getElementById('fullpage');
+const panels     = Array.from(document.querySelectorAll('.panel'));
+const overlay    = document.getElementById('overlay');
+const overlayWrap= document.getElementById('overlayWrap');
+const store       = document.getElementById('store');
+const body       = document.body;
+
+let current = 0;
+let locked  = false;
+let isMobile = false;
+
+/* ====== SSS LİSTELERİNİ OLUŞTUR ====== */
+(function buildFaq(){
+  const list = document.getElementById('faqList');
+  const dd = document.getElementById('dd-sss');
+  FAQ.forEach((qa,i)=>{
+    const item=document.createElement('div');
+    item.className='faq-item';item.id='faq-'+i;
+    item.innerHTML='<button class="faq-q">'+qa[0]+'<span class="plus"></span></button>'+
+                   '<div class="faq-a"><div class="faq-a-inner">'+qa[1]+'</div></div>';
+    const q=item.querySelector('.faq-q');
+    const a=item.querySelector('.faq-a');
+    q.addEventListener('click',()=>{
+      const open=item.classList.contains('open');
+      if(open){item.classList.remove('open');a.style.maxHeight=null;}
+      else{item.classList.add('open');a.style.maxHeight=a.scrollHeight+'px';}
+    });
+    list.appendChild(item);
+
+    const link=document.createElement('a');
+    link.innerHTML='<span class="q-num">'+(i+1)+'.</span>'+qa[0];
+    link.addEventListener('click',()=>{ closeDropdowns(); openArticle('art-sss',i); });
+    dd.appendChild(link);
+  });
+})();
+
+/* ====== MOBİL MENÜYÜ OLUŞTUR ====== */
+(function buildMobileMenu(){
+  const mm=document.getElementById('mobileMenu');
+  const blocks=[
+    {head:'Ana Sayfa', action:()=>{closeMenu();goHome();}},
+    {head:'Ana Yazılarımız', items:[
+      ['Biz Kimiz?',()=>goSection(1)],
+      ['Dijital Oyunlara Yönelik Önyargıları Yeniden Düşünmek',()=>goSection(2)],
+      ['Önyargıyı Kırmak: Yasaklamak Yerine Anlamak',()=>goSection(3)],
+      ['Dijital Medya Riskleri: Sorun Sadece Oyunlar Değil',()=>goSection(4)],
+      ['Aileler Oyunları Ne Kadar Tanıyor?',()=>goSection(5)],
+    ]},
+    {head:'Platformlar ve Yaş Sınırlamaları', items:[
+      ['Yaş Derecelendirmeleri: Dijital Oyunlarda Bilinçli Seçimin İlk Adımı',()=>openArticle('art-platform-1')],
+      ['Oyun Platformlarını Tanımak Neden Önemli?',()=>openArticle('art-platform-2')],
+      ['Çocuk Koruma Sistemleri Nasıl Kullanılır?',()=>openArticle('art-platform-3')],
+    ]},
+    {head:'SSS', items: FAQ.map((qa,i)=>[ (i+1)+'. '+qa[0], ()=>openArticle('art-sss',i) ])},
+    {head:'Hakkımızda', action:()=>{closeMenu();openArticle('art-hakkimizda');}},
+    {head:'Kaynakça', action:()=>{closeMenu();openArticle('art-kaynakca');}},
+  ];
+  blocks.forEach(b=>{
+    const block=document.createElement('div');block.className='mm-block';
+    if(b.items){
+      block.innerHTML='<button class="mm-head">'+b.head+'<span class="c">▾</span></button><div class="mm-sub"></div>';
+      const head=block.querySelector('.mm-head');
+      const sub=block.querySelector('.mm-sub');
+      b.items.forEach(it=>{
+        const a=document.createElement('a');a.textContent=it[0];
+        a.addEventListener('click',()=>{closeMenu();it[1]();});
+        sub.appendChild(a);
+      });
+      head.addEventListener('click',()=>{
+        const open=block.classList.contains('open');
+        document.querySelectorAll('.mm-block.open').forEach(x=>{x.classList.remove('open');x.querySelector('.mm-sub').style.maxHeight=null;});
+        if(!open){block.classList.add('open');sub.style.maxHeight=sub.scrollHeight+'px';}
+      });
+    } else {
+      block.innerHTML='<button class="mm-head">'+b.head+'</button>';
+      block.querySelector('.mm-head').addEventListener('click',b.action);
+    }
+    mm.appendChild(block);
+  });
+})();
+
+/* ====== FULLPAGE GEÇİŞ ====== */
+function applyTransforms(){
+  panels.forEach((p,i)=>{ p.style.transform='translateY('+((i-current)*100)+'%)'; });
+  updateDots();
+}
+function setActive(){
+  panels.forEach((p,i)=>p.classList.toggle('active', i===current));
+}
+function goSection(i){
+  i=Math.max(0,Math.min(panels.length-1,i));
+  closeOverlay();
+  if(isMobile){
+    panels[i].scrollIntoView({behavior:'smooth'});
+    return;
+  }
+  if(i===current){return;}
+  current=i;
+  const sc=panels[i].querySelector('.panel-scroll'); if(sc) sc.scrollTop=0;
+  applyTransforms(); setActive(); lock();
+}
+function goHome(){ goSection(0); }
+function lock(){ locked=true; setTimeout(()=>locked=false,860); }
+
+function updateDots(){
+  document.querySelectorAll('.dots button').forEach((b,i)=>b.classList.toggle('on',i===current));
+}
+
+/* ---- masaüstü tekerlek kontrolü ---- */
+function onWheel(e){
+  if(isMobile) return;
+  if(overlay.classList.contains('open')) return;
+  const sc=panels[current].querySelector('.panel-scroll');
+  const dir=e.deltaY>0?1:-1;
+  if(sc){
+    const atTop=sc.scrollTop<=0;
+    const atBottom=sc.scrollTop+sc.clientHeight>=sc.scrollHeight-2;
+    if(dir>0 && !atBottom) return;     // içerik aşağı kayabiliyorsa normal kaydır
+    if(dir<0 && !atTop)   return;       // içerik yukarı kayabiliyorsa normal kaydır
+  }
+  e.preventDefault();
+  if(locked) return;
+  goSection(current+dir);
+}
+
+/* ---- klavye ---- */
+function onKey(e){
+  if(isMobile||overlay.classList.contains('open')) return;
+  const sc=panels[current].querySelector('.panel-scroll');
+  if(['ArrowDown','PageDown',' '].includes(e.key)){
+    const atBottom=sc.scrollTop+sc.clientHeight>=sc.scrollHeight-2;
+    if(atBottom){e.preventDefault();goSection(current+1);}
+  } else if(['ArrowUp','PageUp'].includes(e.key)){
+    const atTop=sc.scrollTop<=0;
+    if(atTop){e.preventDefault();goSection(current-1);}
+  } else if(e.key==='Home'){e.preventDefault();goSection(0);}
+  else if(e.key==='End'){e.preventDefault();goSection(panels.length-1);}
+  else if(e.key==='Escape'){closeOverlay();}
+}
+
+/* ---- mobil dokunma (bölüm geçişi) ---- */
+let touchStartY=0;
+function onTouchStart(e){ touchStartY=e.touches[0].clientY; }
+
+/* ====== NOKTALAR ====== */
+(function buildDots(){
+  const wrap=document.createElement('div');wrap.className='dots';
+  const labels=['Başlangıç','Biz Kimiz?','Önyargılar','Önyargıyı Kırmak','Dijital Riskler','Aileler ve Oyunlar','Diğer Yazılar'];
+  panels.forEach((p,i)=>{
+    const b=document.createElement('button');
+    b.title=labels[i]||('Bölüm '+i);
+    b.addEventListener('click',()=>goSection(i));
+    wrap.appendChild(b);
+  });
+  document.body.appendChild(wrap);
+  updateDots();
+})();
+
+/* ====== OVERLAY ====== */
+function openArticle(id, faqIndex){
+  const tpl=store.querySelector('#'+id);
+  if(!tpl) return;
+  closeMenu();
+  overlayWrap.innerHTML='';
+  const node=tpl.cloneNode(true);
+  node.style.display='';
+  overlayWrap.appendChild(node);
+
+  // SSS akordeon davranışını yeniden bağla
+  if(id==='art-sss'){
+    overlayWrap.querySelectorAll('.faq-item').forEach(item=>{
+      const q=item.querySelector('.faq-q');
+      const a=item.querySelector('.faq-a');
+      q.addEventListener('click',()=>{
+        const open=item.classList.contains('open');
+        if(open){item.classList.remove('open');a.style.maxHeight=null;}
+        else{item.classList.add('open');a.style.maxHeight=a.scrollHeight+'px';}
+      });
+    });
+  }
+  overlay.classList.add('open');
+  overlay.scrollTop=0;
+  if(isMobile) body.style.overflow='hidden';
+
+  // belirli bir SSS sorusuna git ve aç
+  if(id==='art-sss' && typeof faqIndex==='number'){
+    const item=overlayWrap.querySelector('#faq-'+faqIndex);
+    if(item){
+      const a=item.querySelector('.faq-a');
+      item.classList.add('open'); a.style.maxHeight=a.scrollHeight+'px';
+      setTimeout(()=>{ item.scrollIntoView({behavior:'smooth',block:'center'}); },120);
+    }
+  }
+}
+function closeOverlay(){
+  if(!overlay.classList.contains('open')) return;
+  overlay.classList.remove('open');
+  if(isMobile) body.style.overflow='';
+  setTimeout(()=>{overlayWrap.innerHTML='';},350);
+}
+document.getElementById('overlayClose').addEventListener('click',closeOverlay);
+
+/* ====== NAVİGASYON OLAYLARI ====== */
+// dropdown aç/kapat
+document.querySelectorAll('.nav-item[data-dd]').forEach(item=>{
+  const btn=item.querySelector('.nav-btn');
+  btn.addEventListener('click',e=>{
+    e.stopPropagation();
+    const open=item.classList.contains('open');
+    closeDropdowns();
+    if(!open) item.classList.add('open');
+  });
+});
+function closeDropdowns(){ document.querySelectorAll('.nav-item.open').forEach(x=>x.classList.remove('open')); }
+document.addEventListener('click',closeDropdowns);
+
+// dropdown linkleri ve butonlar
+document.querySelectorAll('[data-goto]').forEach(el=>{
+  el.addEventListener('click',e=>{e.stopPropagation();closeDropdowns();goSection(parseInt(el.dataset.goto,10));});
+});
+document.querySelectorAll('[data-open]').forEach(el=>{
+  el.addEventListener('click',e=>{e.stopPropagation();closeDropdowns();openArticle(el.dataset.open);});
+});
+document.querySelectorAll('[data-home]').forEach(el=>{
+  el.addEventListener('click',e=>{e.stopPropagation();closeDropdowns();goHome();});
+});
+
+// hamburger
+document.querySelector('.hamburger').addEventListener('click',e=>{
+  e.stopPropagation();
+  body.classList.toggle('menu-open');
+});
+function closeMenu(){ body.classList.remove('menu-open'); }
+
+/* ====== MOD AYARI (masaüstü / mobil) ====== */
+const mq=window.matchMedia('(max-width:820px)');
+const io=new IntersectionObserver((entries)=>{
+  entries.forEach(en=>{
+    if(en.isIntersecting){
+      en.target.classList.add('active');
+      const idx=panels.indexOf(en.target);
+      if(idx>=0){current=idx;updateDots();}
+    }
+  });
+},{threshold:.4});
+
+function setMode(){
+  isMobile=mq.matches;
+  if(isMobile){
+    body.classList.add('mode-mobile');
+    panels.forEach(p=>{p.style.transform='';});
+    panels.forEach(p=>io.observe(p));
+  } else {
+    body.classList.remove('mode-mobile');
+    closeMenu();
+    panels.forEach(p=>io.unobserve(p));
+    applyTransforms(); setActive();
+  }
+}
+mq.addEventListener('change',setMode);
+
+/* ====== BAŞLAT ====== */
+fullpage.addEventListener('wheel',onWheel,{passive:false});
+document.addEventListener('keydown',onKey);
+setMode();
+setActive();
+</script>
+</body>
+</html>
